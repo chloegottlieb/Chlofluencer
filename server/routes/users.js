@@ -20,6 +20,7 @@ import {
 } from '../lib/social.js';
 import { serializeStory } from '../lib/serialize.js';
 import { selfUser } from './auth.js';
+import { messagingStatus } from '../lib/messaging.js';
 import { removeUpload, mediaKind } from '../uploads.js';
 
 export default function userRoutes({ db, auth, now, upload, uploadDir }) {
@@ -90,6 +91,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
     db.remove('views', (v) => v.viewerId === id || storyIds.has(v.storyId));
     db.remove('likes', (l) => l.userId === id || storyIds.has(l.storyId));
     db.remove('replies', (r) => r.fromId === id || r.toId === id);
+    db.remove('messages', (m) => m.fromId === id || m.toId === id);
     db.remove('highlights', (h) => h.ownerId === id);
     db.remove('follows', (f) => f.followerId === id || f.followeeId === id);
     db.remove('blocks', (b) => b.blockerId === id || b.blockedId === id);
@@ -183,6 +185,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
         user.id !== me && settings.privacy.showActivityStatus && getSettings(db, me).privacy.showActivityStatus && canView
           ? user.lastActiveAt ?? null
           : null,
+      messaging: messagingStatus(db, me, user.id),
       hasActiveStory: activeStories.length > 0,
       hasUnseenStory: activeStories.some((s) => !db.find('views', (v) => v.storyId === s.id && v.viewerId === me)),
     });

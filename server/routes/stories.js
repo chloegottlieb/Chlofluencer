@@ -5,6 +5,7 @@ import { LIMITS, isSafeBackground, normalizeTags } from '../lib/validation.js';
 import { canViewStory, getSettings, isFollowing, newId, notify, publicUser, storyStats } from '../lib/social.js';
 import { serializeStory } from '../lib/serialize.js';
 import { mediaKind, removeUpload } from '../uploads.js';
+import { conversationId, isMutual } from '../lib/messaging.js';
 
 const DEFAULT_BACKGROUND = 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)';
 const bool = (v, fallback) => (v === undefined || v === '' ? fallback : v === true || v === 'true');
@@ -99,7 +100,9 @@ export default function storyRoutes({ db, auth, now, upload, uploadDir }) {
         createdAt: r.createdAt,
         from: publicUser(db.find('users', (u) => u.id === r.fromId)),
         storyId: r.storyId,
-      }));
+        canMessage: isMutual(db, req.user.id, r.fromId),
+      }))
+      .filter((r) => r.from);
     res.json({ replies });
   });
 
@@ -178,9 +181,22 @@ export default function storyRoutes({ db, auth, now, upload, uploadDir }) {
     if (pref === 'following' && !isFollowing(db, story.authorId, req.user.id)) {
       throw new HttpError(403, 'Only people this creator follows can reply');
     }
+    if (isMutual(db, req.user.id, story.authorId)) {
+      const message = db.insert('messages', {
+        id: newId(),
+        conversationId: conversationId(req.user.id, story.authorId),
+        fromId: req.user.id,
+        toId: story.authorId,
+        text,
+        storyId: story.id,
+        createdAt: now(),
+        readAt: null,
+      });
+      return res.status(201).json({ delivered: 'dm', message });
+    }
     const reply = db.insert('replies', { id: newId(), storyId: story.id, fromId: req.user.id, toId: story.authorId, text, createdAt: now() });
     notify(db, { userId: story.authorId, type: 'reply', actorId: req.user.id, storyId: story.id, text, now: now() });
-    res.status(201).json({ reply });
+    res.status(201).json({ delivered: 'reply', reply });
   });
 
   router.get('/:id/viewers', (req, res) => {

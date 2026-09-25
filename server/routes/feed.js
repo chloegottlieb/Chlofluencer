@@ -26,6 +26,7 @@ export function feedContext(db, viewer, now) {
   }
   for (const l of db.all('likes')) if (l.userId === viewer.id) { const i = touch(l.storyId); if (i) i.liked = true; }
   for (const r of db.all('replies')) if (r.fromId === viewer.id) { const i = touch(r.storyId); if (i) i.replied = true; }
+  for (const m of db.all('messages')) if (m.fromId === viewer.id && m.storyId) { const i = touch(m.storyId); if (i) i.replied = true; }
 
   const interactionsByCreator = new Map();
   for (const i of interactions.values()) {

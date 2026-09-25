@@ -15,10 +15,12 @@ Storytime is a social app built around 24-hour stories. You tap through them lik
 | **Tap-through viewer** | Full-screen 9:16 stories with segmented progress bars. Tap the right side to go forward and the left side to go back. Press and hold to pause, swipe down or press Esc to close, and swipe left or right to skip a creator. Arrow keys and the space bar also work. Photos, videos and text-on-gradient stories are supported. |
 | **Friends → For You** | Friends with unseen stories come first (their newest first). Then a "You're all caught up" card, then an endless, paginated queue of recommended strangers' stories labelled **For You** with a reason ("Because you're into #travel", "Trending", "Just posted", "New creator"). |
 | **Discovery algorithm** | Ranks by declared interests, what you like, reply to and finish watching, creator affinity, engagement, popularity and freshness. It diversifies topics and adds a little seeded exploration. It never shows private accounts, followers-only stories, sensitive stories (if filtered), or creators you blocked, muted or marked "Not interested". |
+| **In-app camera** | Take photos or record videos (up to 60 s) without leaving the app. Tap the shutter for a photo, or press and hold (or switch to Video) to record. You can flip between front and back cameras, and the selfie preview is mirrored. Review the shot, then choose **Retake** or **Use**. **Choose from camera roll** is always available too. |
+| **Direct messages** | People who **follow each other** can DM, and a story reply between them lands in their conversation with a preview of the story. With a **one-way or no connection**, you can only send a **one-way story reply**. It lands in the creator's Activity → Story replies inbox, and they can't reply back. If a follow is dropped or someone blocks, the conversation stays readable but you can't send new messages. Shows unread badges and "Seen" receipts. |
 | **Creator tools** | Post photo, video (up to 60 s) or text stories with captions, hashtags, audience (Everyone / Followers) and a "Show in For You" switch. Story insights show views, views that came from For You, likes, and the viewer list. |
 | **Highlights** | Save any of your stories, active or expired, to named highlights from the viewer or from your private **Archive**. Rename, reorder the cover, add, remove, and delete. Highlights stay on your profile permanently. |
 | **Profiles** | Profile picture upload, name, bio (150 characters), website, interests, follower and following lists, a ring around the avatar when there's an active story, a "Follows you" badge, and activity status. |
-| **Social** | Follow and unfollow, follow requests for private accounts, likes, story replies (inbox under Activity), notifications, search, block, mute, and "Not interested". |
+| **Social** | Follow and unfollow, follow requests for private accounts, likes, story replies, direct messages, notifications, search, block, mute, and "Not interested". |
 | **Settings** | Privacy, For You and discovery, your stories, playback, notifications, appearance, blocked/muted/hidden lists, change password, log out of all devices, and delete account. [Full list below](#settings-reference). |
 
 ---
@@ -78,7 +80,11 @@ Log in with the demo account:
 
 Every seeded account (`maya.travels`, `leo.lifts`, `priya.cooks`, `zoe.wanders`, `sofia.style`, `sam.private`, …) also uses `password123`. You can also **sign up** for a new account.
 
-**Try this:** tap **▶ Watch 3 friends' stories** and keep tapping the right side. When your friends run out you'll see *You're all caught up*. Keep going to reach For You creators, then tap **Follow** on one you like.
+**Try this:**
+1. Tap **▶ Watch 3 friends' stories** and keep tapping the right side. When your friends run out you'll see *You're all caught up*. Keep going to reach For You creators, then tap **Follow** on one you like.
+2. Tap ✈ in the top-right corner. `maya.travels` (you follow each other) has sent you a DM.
+3. Open **Activity → Story replies** to see a one-way reply from `zoe.wanders`. You don't follow each other, so you can't reply back.
+4. Tap **＋ → Photo / Video → Open camera** to take a photo or video in the app.
 
 ### Production-style run (single server)
 
@@ -86,6 +92,18 @@ Every seeded account (`maya.travels`, `leo.lifts`, `priya.cooks`, `zoe.wanders`,
 npm run build   # builds the React app into ./dist
 npm start       # serves the API and the built app at http://localhost:4000
 ```
+
+### Try it on your phone (camera included)
+
+Browsers only allow camera access on `https://` or `localhost`. To test the in-app camera on a real phone on the same Wi-Fi:
+
+```bash
+npm run dev:phone
+```
+
+This serves the app over HTTPS with a self-signed certificate. Vite prints a **Network** address such as `https://192.168.1.23:5173`. Open that address on your phone and accept the certificate warning (on iPhone, tap *Show Details → visit this website*; in Chrome for Android, tap *Advanced → Proceed*). Allow camera access when asked.
+
+Without HTTPS, the camera screen explains why it can't start and offers **Choose from camera roll** instead. The camera roll picker works over plain HTTP too.
 
 ### Reset the demo data
 
@@ -118,8 +136,8 @@ The test suite has four layers:
 | --- | --- | --- | --- |
 | Unit: feed algorithm, validation, settings, storage, player logic, formatting | Vitest | `tests/unit/` | `npm test` |
 | API integration: every endpoint against an in-memory DB with a controllable clock (so 24-hour expiry is tested) | Vitest + Supertest | `tests/api/` | `npm test` |
-| Component: story viewer, home, auth, settings, create, profile, activity | Vitest + Testing Library + jsdom | `tests/client/` | `npm test` |
-| End-to-end: the BDD scenarios below, in a real Chromium on a Pixel-7 viewport against a freshly seeded server | Playwright | `e2e/` | `npm run test:e2e` |
+| Component: story viewer, camera, messages, home, auth, settings, create, profile, activity | Vitest + Testing Library + jsdom | `tests/client/` | `npm test` |
+| End-to-end: the BDD scenarios below, in a real Chromium on a Pixel-7 viewport (with a simulated camera and microphone) against a freshly seeded server | Playwright | `e2e/` | `npm run test:e2e` |
 
 ```bash
 npm test                 # unit + API + component tests (~10 s)
@@ -137,7 +155,7 @@ npm run test:all         # everything
 
 > On Linux CI machines, use `npx playwright install --with-deps chromium` to also install the system libraries Chromium needs.
 
-The current suite has **265** unit, API and component tests plus **26** end-to-end scenarios. Coverage is about 97% of lines in `server/lib` and `server/routes`, and about 84% across the whole codebase.
+The current suite has **320** unit, API and component tests plus **34** end-to-end scenarios.
 
 ---
 
@@ -276,6 +294,57 @@ Feature: For You discovery of new creators
     Then I never see "sam.private"
 ```
 
+#### `e2e/features/messages.feature` → automated in `e2e/messages.spec.js`
+
+```gherkin
+Feature: Direct messages and story replies
+  Two people who follow each other can DM. Otherwise, the only way to reach
+  a creator is a one-way story reply, which they can read but not answer.
+
+  Scenario: Mutual follows can message each other
+    Given "alex" and "blair" follow each other
+    When alex opens Messages and starts a new message to blair
+    And alex sends "Coffee later?"
+    Then blair sees an unread badge on the Messages icon
+    And blair opens the conversation and sees "Coffee later?"
+    When blair replies "Yes! 3pm"
+    Then alex sees "Yes! 3pm" in the conversation
+    And alex's message is marked "Seen"
+
+  Scenario: A story reply between mutuals goes to DMs
+    Given "alex" and "blair" follow each other
+    And blair has posted a story
+    When alex opens blair's story
+    Then the reply box says "Message blair…"
+    When alex sends "Where is this?!"
+    Then alex sees "Sent to your messages"
+    And blair's conversation with alex shows the reply with a preview of the story
+    And blair can reply in the conversation
+
+  Scenario: One-way follow gives a one-way story reply
+    Given "fan" follows "creator" but creator does not follow back
+    And creator has posted a story
+    When fan opens creator's story
+    Then the reply box says "Reply to creator…"
+    When fan sends "Huge fan!"
+    Then fan sees "Reply sent"
+    And creator sees "Huge fan!" under Activity → Story replies marked "One-way reply"
+    And creator has no conversation with fan in Messages
+    And fan's profile has no "Message" button for creator
+
+  Scenario: Strangers can only reply to stories
+    Given "stranger" and "creator" don't follow each other
+    When stranger visits creator's profile
+    Then there is no "Message" button
+    And opening creator's conversation directly shows "once you both follow each other" with no message box
+
+  Scenario: Unfollowing makes a conversation read-only
+    Given "alex" and "blair" have been messaging
+    When blair unfollows alex
+    Then alex's conversation with blair still shows the history
+    But the message box is replaced with "once you both follow each other"
+```
+
 #### `e2e/features/posting-and-highlights.feature` → automated in `e2e/posting.spec.js`
 
 ```gherkin
@@ -290,10 +359,35 @@ Feature: Posting stories and saving highlights
     Then "Your story" in the tray shows a ring
     And tapping it plays my story with a view count
 
-  Scenario: Post a photo story
+  Scenario: Post a photo story from the camera roll
     Given I am logged in
-    When I choose a photo in the Photo / Video tab and share it
+    When I tap "Choose from camera roll" in the Photo / Video tab and pick a photo
+    And I share it
     Then my story plays the photo
+
+  Scenario: Take a photo with the in-app camera and post it
+    Given I am logged in and have allowed camera access
+    When I tap "Open camera" in the Photo / Video tab
+    And I tap the shutter
+    Then I see the photo I just took
+    When I tap "Use photo" and share it
+    Then my story plays the photo
+
+  Scenario: Record a video with the in-app camera and post it
+    Given I am logged in and have allowed camera access
+    When I open the camera and switch to "Video"
+    And I tap the shutter to start recording
+    Then I see a recording timer
+    When I tap the shutter again after a couple of seconds
+    And I tap "Use video" and share it
+    Then my story plays the video for as long as I recorded
+
+  Scenario: Retake and flip the camera
+    Given the in-app camera is open
+    When I tap "Flip camera"
+    Then the preview switches to the front camera, mirrored like a selfie
+    When I take a photo and tap "Retake"
+    Then the live camera comes back
 
   Scenario: Save my story to a new highlight from the viewer
     Given I have posted a story
@@ -369,6 +463,22 @@ Feature: 24-hour lifecycle
     Given maya turned off "Save stories to archive"
     When her story expires
     Then it is permanently deleted unless it's in a highlight
+
+Feature: In-app camera on real devices (manual)
+  Scenario: Camera permission denied
+    Given I denied camera access in my browser
+    When I tap "Open camera"
+    Then I see "Camera access is blocked"
+    And "Choose from camera roll" opens my photo library
+
+  Scenario: Plain http on a phone
+    Given I opened the app over http:// on my phone's network address
+    When I tap "Open camera"
+    Then I'm told the camera needs https:// and offered the camera roll instead
+
+  Scenario: Selfie video on iPhone Safari and Android Chrome
+    When I flip to the front camera and hold the shutter for 5 seconds
+    Then the story plays my 5-second video with sound
 
 Feature: For You learns from behaviour
   Scenario: Likes teach the algorithm
@@ -454,8 +564,9 @@ Friends are simpler: people you follow who have active stories, those with unsee
 │       ├── auth.jsx          auth context and theme application
 │       ├── lib/player.js     pure queue/cursor logic for the tap-through viewer
 │       ├── lib/time.js       relative time and count formatting
-│       ├── components/       StoryViewer, HighlightPicker, ViewersSheet, Avatar, …
-│       └── pages/            Home, Create, Profile, EditProfile, Settings, Archive, Activity, Search, Login, Signup
+│       ├── lib/camera.js     camera helpers (recorder format, 9:16 crop, errors)
+│       ├── components/       StoryViewer, CameraCapture, HighlightPicker, ViewersSheet, MessagesLink, …
+│       └── pages/            Home, Create, Messages, Conversation, Profile, EditProfile, Settings, Archive, Activity, Search, Login, Signup
 ├── server/                   Express 5 API
 │   ├── index.js              entry point (auto-seeds an empty DB)
 │   ├── app.js                createApp({ db, now, uploadDir, … }) with injectable dependencies for tests
@@ -465,9 +576,10 @@ Friends are simpler: people you follow who have active stories, those with unsee
 │   ├── seed.js               demo world, with SVG images generated offline
 │   ├── lib/feed.js           ★ the friends + For You ranking algorithm
 │   ├── lib/social.js         follow, block and visibility rules; notifications
+│   ├── lib/messaging.js      who can DM whom (mutual follows only)
 │   ├── lib/settings.js       settings schema, defaults and validation
 │   ├── lib/validation.js     input validation
-│   └── routes/               auth, users, stories, feed, highlights, settings, notifications
+│   └── routes/               auth, users, stories, feed, highlights, messages, settings, notifications
 ├── tests/
 │   ├── unit/                 pure-logic tests
 │   ├── api/                  Supertest integration tests
@@ -494,7 +606,7 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 | `GET /stories/mine` · `/stories/archive` · `/stories/replies` | Your active stories · all your stories · replies inbox |
 | `GET/DELETE /stories/:id` | View or delete a story |
 | `POST /stories/:id/view` | `{ completion 0–1, source: friends\|discover\|highlight }` |
-| `POST/DELETE /stories/:id/like` · `POST /stories/:id/reply` | Like/unlike · `{ text }` |
+| `POST/DELETE /stories/:id/like` · `POST /stories/:id/reply` | Like/unlike · `{ text }`. Returns `delivered: "dm"` between mutual follows, otherwise `"reply"` (one-way). |
 | `GET /stories/:id/viewers` | Insights (author only) |
 | `GET /users/search?q=` · `GET /users/:username` · `GET /users/:username/stories` | Search · profile · active stories |
 | `PATCH /users/me` · `POST/DELETE /users/me/avatar` · `DELETE /users/me` | Edit profile · profile picture · delete account (`{ password }`) |
@@ -506,6 +618,8 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 | `POST /highlights` · `PATCH /highlights/:id` · `DELETE /highlights/:id` | `{ title, storyIds }` · `{ title?, addStoryIds?, removeStoryIds?, coverStoryId? }` |
 | `GET/PATCH /settings` · `POST /settings/password` · `POST /settings/reset-recommendations` | Settings |
 | `GET /notifications` · `POST /notifications/read` | Activity |
+| `GET /messages` · `GET /messages/unread` · `GET /messages/contacts` | Inbox (conversations with unread counts) · unread total · people you can message (mutual follows) |
+| `GET /messages/:username` · `POST /messages/:username` | Open a thread (marks it read, includes `canMessage` and `reason`) · send `{ text }`. Returns 403 `reason: not_mutual` unless you follow each other. |
 
 ---
 
@@ -515,11 +629,14 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 - **Login says "Session expired"** after a restart with a different `JWT_SECRET`: log in again.
 - **Playwright can't find a browser**: run `npx playwright install chromium`.
 - **Weird data**: run `npm run seed`, or delete `./data`.
+- **Camera won't start**: you need `https://` or `localhost` (use `npm run dev:phone` on a phone), camera permission for the site, and no other app using the camera.
+- **Don't see the demo DMs?** Your `./data` was created before messaging existed. Run `npm run seed` to rebuild the demo world.
 - **Videos don't autoplay with sound**: browsers block autoplay with sound until you interact with the page. Tap the 🔇 button.
 
 ## MVP limitations and next steps
 
 - Storage is a single JSON file. That's fine for demos and small groups. Swap `server/db.js` for Postgres or SQLite before real traffic, since the rest of the server only uses its small `find/filter/insert/update/remove` interface.
 - Media is stored on local disk with no transcoding. A real deployment would use object storage (S3 or similar) and a CDN.
-- There are no real-time updates. The feed refreshes when you close the viewer or navigate.
-- Replies go to an inbox. Threaded DMs, reporting and content moderation, close-friends lists, stickers and music are natural next features.
+- There are no real-time updates over WebSockets. Open conversations check for new messages every 4 seconds, the unread badge every 15 seconds, and the feed refreshes when you close the viewer or navigate.
+- The camera has no filters, zoom, flash or text/sticker editing yet. Recorded videos are uploaded as the browser recorded them (MP4 on Safari and recent Chrome, WebM on older Chrome and Firefox). Older iPhones may not play WebM stories.
+- DMs are text-only. Photos and voice notes in DMs, message requests, reporting and content moderation, close-friends lists, stickers and music (Spotify) are natural next features.

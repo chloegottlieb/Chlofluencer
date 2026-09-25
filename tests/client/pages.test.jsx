@@ -250,3 +250,16 @@ describe('Avatar', () => {
     expect(screen.getByRole('button')).toHaveAttribute('data-ring', 'unseen');
   });
 });
+
+describe('Create story with the camera', () => {
+  it('offers both the in-app camera and the camera roll', async () => {
+    mockApi();
+    renderApp(<App />, { route: '/create' });
+    fireEvent.click(await screen.findByRole('tab', { name: /Photo/ }));
+    expect(screen.getByRole('button', { name: /Open camera/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Choose from camera roll/ })).toBeInTheDocument();
+    // No camera API in jsdom: the camera explains why and offers the camera roll instead.
+    fireEvent.click(screen.getByRole('button', { name: /Open camera/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('https://');
+  });
+});

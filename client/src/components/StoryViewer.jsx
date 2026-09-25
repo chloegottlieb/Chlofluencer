@@ -255,9 +255,9 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
     const text = reply.trim();
     if (!text) return;
     try {
-      await api(`/stories/${story.id}/reply`, { method: 'POST', body: { text } });
+      const { delivered } = await api(`/stories/${story.id}/reply`, { method: 'POST', body: { text } });
       setReply('');
-      showToast('Reply sent');
+      showToast(delivered === 'dm' ? 'Sent to your messages' : 'Reply sent');
       e.target.querySelector('input')?.blur();
     } catch (err) {
       showToast(err.message);
@@ -455,7 +455,7 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
                   <form onSubmit={sendReply} className="grow">
                     <input
                       className="reply-input"
-                      placeholder={`Reply to ${group.author.username}…`}
+                      placeholder={story.replyMode === 'dm' ? `Message ${group.author.username}…` : `Reply to ${group.author.username}…`}
                       aria-label="Reply to story"
                       value={reply}
                       maxLength={500}

@@ -8,6 +8,7 @@ export const COLLECTIONS = [
   'views',
   'likes',
   'replies',
+  'messages',
   'highlights',
   'blocks',
   'mutes',

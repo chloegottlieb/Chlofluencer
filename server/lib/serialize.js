@@ -1,4 +1,5 @@
 import { getSettings, publicUser } from './social.js';
+import { isMutual } from './messaging.js';
 
 /**
  * Shape a story for a given viewer. View/like counts are only included for
@@ -27,6 +28,8 @@ export function serializeStory(db, story, viewerId, { stats, now } = {}) {
     isOwner,
     likesEnabled: authorSettings.stories.allowLikes,
     repliesSetting: authorSettings.privacy.storyReplies,
+    // Mutuals' story replies go to DMs; everyone else's are one-way.
+    replyMode: !isOwner && isMutual(db, viewerId, story.authorId) ? 'dm' : 'reply',
     likedByMe: !!db.find('likes', (l) => l.storyId === story.id && l.userId === viewerId),
     seenByMe: !!db.find('views', (v) => v.storyId === story.id && v.viewerId === viewerId),
   };

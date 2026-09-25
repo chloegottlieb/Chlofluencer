@@ -241,5 +241,30 @@ export function seedDemoData(db, { now = Date.now(), uploadDir }) {
     expiresAt: demoOld + STORY_TTL_MS,
   });
 
+  // A DM conversation between mutuals (demo <-> maya) and a one-way story
+  // reply from a stranger (zoe -> demo), to show both messaging modes.
+  const dm = (from, to, text, minutesAgo, read = true) =>
+    db.insert('messages', {
+      id: newId(),
+      conversationId: [users[from].id, users[to].id].sort().join(':'),
+      fromId: users[from].id,
+      toId: users[to].id,
+      text,
+      storyId: null,
+      createdAt: now - minutesAgo * 60 * 1000,
+      readAt: read ? now - minutesAgo * 60 * 1000 : null,
+    });
+  dm('demo', 'maya.travels', 'Your Bali sunrise story was unreal 😍', 300);
+  dm('maya.travels', 'demo', 'Thank you!! Worth the 5am alarm', 290);
+  dm('maya.travels', 'demo', 'Q&A is tonight, send me a question?', 45, false);
+  db.insert('replies', {
+    id: newId(),
+    storyId: db.find('stories', (s) => s.authorId === users.demo.id).id,
+    fromId: users['zoe.wanders'].id,
+    toId: users.demo.id,
+    text: 'Welcome to Storytime! ✨',
+    createdAt: demoOld + HOUR,
+  });
+
   return users;
 }

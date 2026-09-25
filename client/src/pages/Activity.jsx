@@ -83,7 +83,9 @@ export default function Activity() {
           </ul>
         )
       ) : replies.length === 0 ? (
-        <p className="muted center">No replies yet.</p>
+        <p className="muted center">
+          No replies yet. Replies from people you both follow go to <Link to="/messages">Messages</Link>.
+        </p>
       ) : (
         <ul className="list" aria-label="Story replies">
           {replies.map((r) => (
@@ -93,6 +95,12 @@ export default function Activity() {
                 <Link to={`/u/${r.from.username}`}><strong>{r.from.username}</strong></Link>
                 <br />
                 {r.text}
+                <br />
+                {r.canMessage ? (
+                  <Link to={`/messages/${r.from.username}`} className="small-text">Message {r.from.username}</Link>
+                ) : (
+                  <span className="muted small-text">One-way reply · follow each other to chat</span>
+                )}
               </span>
               <span className="muted">{timeAgo(r.createdAt)}</span>
             </li>

@@ -133,6 +133,9 @@ export default function Profile() {
             {followLabel}
           </button>
         )}
+        {!isMe && profile.messaging?.canMessage && (
+          <Link className="btn" to={`/messages/${user.username}`}>Message</Link>
+        )}
         {!isMe && relationship.followsYou && <span className="chip">Follows you</span>}
       </section>
 

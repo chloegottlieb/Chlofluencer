@@ -1,0 +1,72 @@
+import { describe, expect, it } from 'vitest';
+import {
+  baseMimeType,
+  cameraErrorMessage,
+  cameraSupported,
+  cropTo916,
+  extensionFor,
+  formatRecordingTime,
+  pickRecorderMimeType,
+} from '../../client/src/lib/camera.js';
+
+describe('pickRecorderMimeType', () => {
+  it('prefers MP4, then WebM', () => {
+    expect(pickRecorderMimeType({ isTypeSupported: () => true })).toBe('video/mp4');
+    expect(pickRecorderMimeType({ isTypeSupported: (t) => t.startsWith('video/webm') })).toBe('video/webm;codecs=vp9,opus');
+    expect(pickRecorderMimeType({ isTypeSupported: (t) => t === 'video/webm' })).toBe('video/webm');
+  });
+  it('returns "" when nothing is supported or MediaRecorder is missing', () => {
+    expect(pickRecorderMimeType({ isTypeSupported: () => false })).toBe('');
+    expect(pickRecorderMimeType(undefined)).toBe('');
+  });
+});
+
+describe('mime helpers', () => {
+  it('strips codecs', () => {
+    expect(baseMimeType('video/webm;codecs=vp9,opus')).toBe('video/webm');
+    expect(baseMimeType('')).toBe('video/webm');
+  });
+  it('maps extensions', () => {
+    expect(extensionFor('video/mp4')).toBe('mp4');
+    expect(extensionFor('video/webm;codecs=vp8')).toBe('webm');
+    expect(extensionFor('image/jpeg')).toBe('jpg');
+    expect(extensionFor('audio/ogg')).toBe('bin');
+  });
+});
+
+describe('cropTo916', () => {
+  it('crops landscape frames to a centred portrait slice', () => {
+    expect(cropTo916(1920, 1080)).toEqual({ sx: 656, sy: 0, sw: 608, sh: 1080 });
+  });
+  it('crops tall frames vertically', () => {
+    expect(cropTo916(1080, 2400)).toEqual({ sx: 0, sy: 240, sw: 1080, sh: 1920 });
+  });
+  it('leaves exact 9:16 alone and handles empty frames', () => {
+    expect(cropTo916(1080, 1920)).toEqual({ sx: 0, sy: 0, sw: 1080, sh: 1920 });
+    expect(cropTo916(0, 0)).toEqual({ sx: 0, sy: 0, sw: 0, sh: 0 });
+  });
+});
+
+describe('cameraSupported / cameraErrorMessage', () => {
+  it('detects getUserMedia', () => {
+    expect(cameraSupported({ mediaDevices: { getUserMedia() {} } })).toBe(true);
+    expect(cameraSupported({})).toBe(false);
+    expect(cameraSupported(undefined)).toBe(false);
+  });
+  it.each([
+    ['NotAllowedError', /blocked/],
+    ['SecurityError', /blocked/],
+    ['NotFoundError', /couldn't find a camera/],
+    ['NotReadableError', /another app/],
+    ['Unsupported', /https/],
+    ['Weird', /Something went wrong/],
+  ])('%s', (name, msg) => expect(cameraErrorMessage({ name })).toMatch(msg));
+});
+
+describe('formatRecordingTime', () => {
+  it('formats seconds', () => {
+    expect(formatRecordingTime(0)).toBe('0:00');
+    expect(formatRecordingTime(9_900)).toBe('0:09');
+    expect(formatRecordingTime(60_000)).toBe('0:60');
+  });
+});

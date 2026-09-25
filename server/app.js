@@ -9,6 +9,7 @@ import feedRoutes from './routes/feed.js';
 import highlightRoutes from './routes/highlights.js';
 import settingsRoutes from './routes/settings.js';
 import notificationRoutes from './routes/notifications.js';
+import messageRoutes from './routes/messages.js';
 import { createUploader } from './uploads.js';
 
 /**
@@ -37,6 +38,7 @@ export function createApp({
   app.use('/api/highlights', highlightRoutes(ctx));
   app.use('/api/settings', settingsRoutes(ctx));
   app.use('/api/notifications', notificationRoutes(ctx));
+  app.use('/api/messages', messageRoutes(ctx));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found')));
 
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -54,6 +56,7 @@ export function createApp({
     res.status(status).json({
       error: status >= 500 ? 'Something went wrong' : err.message,
       ...(err.field ? { field: err.field } : {}),
+      ...(err.reason ? { reason: err.reason } : {}),
     });
   });
 

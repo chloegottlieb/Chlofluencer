@@ -7,6 +7,7 @@ export const LIMITS = {
   captionMax: 200,
   storyTextMax: 280,
   replyMax: 500,
+  messageMax: 1000,
   highlightTitleMax: 30,
   maxTags: 10,
   maxInterests: 15,

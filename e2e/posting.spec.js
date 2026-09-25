@@ -1,6 +1,6 @@
 // Implements features/posting-and-highlights.feature
 import { expect, test } from '@playwright/test';
-import { apiPostStory, apiSignup, openAs, viewer } from './helpers.js';
+import { apiPostStory, apiSignup, authed, openAs, viewer } from './helpers.js';
 
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
@@ -23,7 +23,7 @@ test.describe('Feature: Posting stories and saving highlights', () => {
     await expect(page.getByRole('button', { name: /0 views/ })).toBeVisible();
   });
 
-  test('Post a photo story', async ({ page, request }) => {
+  test('Post a photo story from the camera roll', async ({ page, request }) => {
     const me = await apiSignup(request, 'photo');
     await openAs(page, me.token, '/create');
     await page.getByRole('tab', { name: /Photo/ }).click();
@@ -32,6 +32,62 @@ test.describe('Feature: Posting stories and saving highlights', () => {
     await page.getByRole('button', { name: 'Share to your story' }).click();
     await page.getByRole('region', { name: 'Stories' }).locator('.tray-item').first().getByRole('button').first().click();
     await expect(viewer(page).locator('img.story-media')).toHaveAttribute('src', /\/uploads\/.+\.png/);
+  });
+
+  test('Take a photo with the in-app camera and post it', async ({ page, request }) => {
+    const me = await apiSignup(request, 'snap');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    const camera = page.getByTestId('camera');
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('button', { name: 'Take photo' }).click();
+    await expect(camera).toHaveAttribute('data-status', 'review');
+    await expect(page.getByAltText('Captured photo')).toBeVisible();
+    await page.getByRole('button', { name: 'Use photo' }).click();
+    await expect(page.getByAltText('Story preview')).toBeVisible();
+    await page.getByRole('button', { name: 'Share to your story' }).click();
+    await page.getByRole('region', { name: 'Stories' }).locator('.tray-item').first().getByRole('button').first().click();
+    await expect(viewer(page).locator('img.story-media')).toHaveAttribute('src', /\/uploads\/.+\.jpg/);
+  });
+
+  test('Record a video with the in-app camera and post it', async ({ page, request }) => {
+    const me = await apiSignup(request, 'vlog');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    await expect(page.getByTestId('camera')).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('radio', { name: 'Video' }).click();
+    await page.getByRole('button', { name: 'Start recording' }).click();
+    await expect(page.getByRole('timer')).toBeVisible();
+    await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: 'Stop recording' }).click();
+    await page.getByRole('button', { name: 'Use video' }).click();
+    await page.getByRole('button', { name: 'Share to your story' }).click();
+    await expect(page.getByRole('region', { name: 'Stories' })).toBeVisible();
+    const { stories } = await (await authed(request, me.token).get('/stories/mine')).json();
+    expect(stories).toHaveLength(1);
+    expect(stories[0].type).toBe('video');
+    expect(stories[0].durationMs).toBeGreaterThan(1500);
+    expect(stories[0].durationMs).toBeLessThan(10_000);
+    await page.getByRole('region', { name: 'Stories' }).locator('.tray-item').first().getByRole('button').first().click();
+    await expect(page.getByTestId('story-video')).toBeVisible();
+  });
+
+  test('Retake and flip the camera', async ({ page, request }) => {
+    const me = await apiSignup(request, 'flip');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    const camera = page.getByTestId('camera');
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('button', { name: 'Flip camera' }).click();
+    await expect(page.getByTestId('camera-feed')).toHaveClass(/mirrored/);
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('button', { name: 'Take photo' }).click();
+    await page.getByRole('button', { name: 'Retake' }).click();
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await expect(page.getByTestId('camera-feed')).toBeVisible();
   });
 
   test('Save my story to a new highlight from the viewer', async ({ page, request }) => {

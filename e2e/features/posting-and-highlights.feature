@@ -9,10 +9,35 @@ Feature: Posting stories and saving highlights
     Then "Your story" in the tray shows a ring
     And tapping it plays my story with a view count
 
-  Scenario: Post a photo story
+  Scenario: Post a photo story from the camera roll
     Given I am logged in
-    When I choose a photo in the Photo / Video tab and share it
+    When I tap "Choose from camera roll" in the Photo / Video tab and pick a photo
+    And I share it
     Then my story plays the photo
+
+  Scenario: Take a photo with the in-app camera and post it
+    Given I am logged in and have allowed camera access
+    When I tap "Open camera" in the Photo / Video tab
+    And I tap the shutter
+    Then I see the photo I just took
+    When I tap "Use photo" and share it
+    Then my story plays the photo
+
+  Scenario: Record a video with the in-app camera and post it
+    Given I am logged in and have allowed camera access
+    When I open the camera and switch to "Video"
+    And I tap the shutter to start recording
+    Then I see a recording timer
+    When I tap the shutter again after a couple of seconds
+    And I tap "Use video" and share it
+    Then my story plays the video for as long as I recorded
+
+  Scenario: Retake and flip the camera
+    Given the in-app camera is open
+    When I tap "Flip camera"
+    Then the preview switches to the front camera, mirrored like a selfie
+    When I take a photo and tap "Retake"
+    Then the live camera comes back
 
   Scenario: Save my story to a new highlight from the viewer
     Given I have posted a story

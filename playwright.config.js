@@ -14,6 +14,11 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     ...devices['Pixel 7'],
     trace: 'retain-on-failure',
+    // A simulated webcam + mic so the in-app camera can be tested headlessly.
+    permissions: ['camera', 'microphone'],
+    launchOptions: {
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+    },
   },
   webServer: {
     // Fresh, seeded database for every run.

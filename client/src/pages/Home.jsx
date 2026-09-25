@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, qs } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Avatar from '../components/Avatar.jsx';
+import MessagesLink from '../components/MessagesLink.jsx';
 import StoryViewer from '../components/StoryViewer.jsx';
 import { buildQueue, markSeen } from '../lib/player.js';
 
@@ -53,7 +54,10 @@ export default function Home() {
     <div className="page home">
       <header className="top-bar">
         <h1 className="logo">Storytime</h1>
-        <Link to="/settings" className="icon-btn" aria-label="Settings">⚙</Link>
+        <span className="top-actions">
+          <MessagesLink />
+          <Link to="/settings" className="icon-btn" aria-label="Settings">⚙</Link>
+        </span>
       </header>
 
       <section className="tray" aria-label="Stories">

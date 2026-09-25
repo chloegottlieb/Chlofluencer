@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
+import CameraCapture from '../components/CameraCapture.jsx';
 import Toggle from '../components/Toggle.jsx';
 
 export const BACKGROUNDS = [
@@ -29,6 +30,8 @@ export default function Create() {
   const [sensitive, setSensitive] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!file) return setPreview(null);
@@ -38,6 +41,23 @@ export default function Create() {
   }, [file]);
 
   const isVideo = file?.type?.startsWith('video/');
+
+  const chooseFile = (f) => {
+    setFile(f);
+    setDurationMs(null);
+    setMode('media');
+  };
+
+  const onCaptured = (f, { durationMs: ms }) => {
+    chooseFile(f);
+    if (ms) setDurationMs(ms);
+    setCameraOpen(false);
+  };
+
+  const openLibrary = () => {
+    setCameraOpen(false);
+    fileInputRef.current?.click();
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -97,27 +117,43 @@ export default function Create() {
                 src={preview}
                 controls
                 muted
-                onLoadedMetadata={(e) => setDurationMs(Math.round(Math.min(60, e.currentTarget.duration) * 1000))}
+                onLoadedMetadata={(e) => {
+                  // Recorded WebM often reports Infinity; keep the recorder's own duration then.
+                  const d = e.currentTarget.duration;
+                  if (Number.isFinite(d) && d > 0) setDurationMs(Math.round(Math.min(60, d) * 1000));
+                }}
               />
             ) : (
               <img src={preview} alt="Story preview" />
             )
           ) : (
-            <label className="file-drop">
-              <span>Tap to choose a photo or video</span>
-              <input
-                type="file"
-                accept="image/*,video/mp4,video/webm,video/quicktime"
-                aria-label="Choose photo or video"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
+            <div className="media-choices">
+              <button type="button" className="btn primary block" onClick={() => setCameraOpen(true)}>
+                📷 Open camera
+              </button>
+              <button type="button" className="btn ghost block" onClick={() => fileInputRef.current?.click()}>
+                🖼 Choose from camera roll
+              </button>
+            </div>
           )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            hidden
+            accept="image/*,video/mp4,video/webm,video/quicktime"
+            aria-label="Choose photo or video"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) chooseFile(f);
+              e.target.value = '';
+            }}
+          />
         </div>
         {mode === 'media' && file && (
-          <button type="button" className="link-btn" onClick={() => setFile(null)}>
-            Choose a different file
-          </button>
+          <div className="row-center">
+            <button type="button" className="link-btn" onClick={() => setCameraOpen(true)}>Retake with camera</button>
+            <button type="button" className="link-btn" onClick={() => fileInputRef.current?.click()}>Choose a different file</button>
+          </div>
         )}
 
         {mode === 'text' && (
@@ -170,6 +206,9 @@ export default function Create() {
           {busy ? 'Sharing…' : 'Share to your story'}
         </button>
       </form>
+      {cameraOpen && (
+        <CameraCapture onCapture={onCaptured} onClose={() => setCameraOpen(false)} onUseLibrary={openLibrary} />
+      )}
     </div>
   );
 }

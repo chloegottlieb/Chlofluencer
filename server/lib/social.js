@@ -87,6 +87,7 @@ export function storyStats(db) {
   }
   for (const l of db.all('likes')) get(l.storyId).likes++;
   for (const r of db.all('replies')) get(r.storyId).replies++;
+  for (const m of db.all('messages')) if (m.storyId) get(m.storyId).replies++;
   return stats;
 }
 

@@ -7,7 +7,9 @@ import Activity from './pages/Activity.jsx';
 import Archive from './pages/Archive.jsx';
 import Create from './pages/Create.jsx';
 import EditProfile from './pages/EditProfile.jsx';
+import Conversation from './pages/Conversation.jsx';
 import Home from './pages/Home.jsx';
+import Messages from './pages/Messages.jsx';
 import Login from './pages/Login.jsx';
 import Profile from './pages/Profile.jsx';
 import Search from './pages/Search.jsx';
@@ -53,6 +55,8 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/u/:username" element={<Profile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:username" element={<Conversation />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
           <Route path="*" element={<div className="page"><p className="muted center">Page not found.</p></div>} />

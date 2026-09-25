@@ -30,7 +30,7 @@ export default function App() {
   const { user, loading } = useAuth();
   const unread = useUnreadCount(user);
 
-  if (loading) return <div className="splash">Chlofluencer</div>;
+  if (loading) return <div className="splash">Storytime</div>;
 
   if (!user) {
     return (

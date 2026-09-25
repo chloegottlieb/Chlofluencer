@@ -1,8 +1,8 @@
-# Chlofluencer
+# Storytime
 
 **Stories first. Friends, then the world.**
 
-Chlofluencer is a social app built around 24-hour stories. You tap through them like Instagram stories, not scroll like TikTok. When you finish your friends' stories, you keep going: the next taps play stories from creators you don't follow yet, ranked by a For You algorithm. The goal is to make stories a place where vloggers and influencers can be discovered, not only where they keep up with the followers they already have.
+Storytime is a social app built around 24-hour stories. You tap through them like Instagram stories, not scroll like TikTok. When you finish your friends' stories, you keep going: the next taps play stories from creators you don't follow yet, ranked by a For You algorithm. The goal is to make stories a place where vloggers and influencers can be discovered, not only where they keep up with the followers they already have.
 
 <p align="center"><em>Tray of friends → tap through → "You're all caught up" → For You stories from new creators → Follow straight from the story.</em></p>
 
@@ -40,7 +40,7 @@ There's no database server or other external service to set up. Data is stored i
 
 ```bash
 git clone https://github.com/chloegottlieb/Chlofluencer.git
-cd Chlofluencer
+cd Chlofluencer   # the repository keeps its original name
 # Use the feature branch if it hasn't been merged yet:
 git checkout claude/stories-discovery-social-app-c7tcmk
 ```

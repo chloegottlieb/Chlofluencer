@@ -16,4 +16,4 @@ if (db.isEmpty() && process.env.SEED !== 'false') {
 }
 
 const app = createApp({ db, uploadDir, clientDir: path.join(root, 'dist') });
-app.listen(port, () => console.log(`Chlofluencer API listening on http://localhost:${port}`));
+app.listen(port, () => console.log(`Storytime API listening on http://localhost:${port}`));

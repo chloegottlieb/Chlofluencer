@@ -59,8 +59,8 @@ const safeParse = (b) => {
 export const fail = (status, error) => ({ __status: status, body: { error } });
 
 export function renderApp(ui, { route = '/', loggedIn = true } = {}) {
-  if (loggedIn) localStorage.setItem('cf_token', 'test-token');
-  else localStorage.removeItem('cf_token');
+  if (loggedIn) localStorage.setItem('storytime_token', 'test-token');
+  else localStorage.removeItem('storytime_token');
   return render(
     <MemoryRouter initialEntries={[route]}>
       <AuthProvider>{ui}</AuthProvider>

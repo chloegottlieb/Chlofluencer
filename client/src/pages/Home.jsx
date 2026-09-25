@@ -52,7 +52,7 @@ export default function Home() {
   return (
     <div className="page home">
       <header className="top-bar">
-        <h1 className="logo">Chlofluencer</h1>
+        <h1 className="logo">Storytime</h1>
         <Link to="/settings" className="icon-btn" aria-label="Settings">⚙</Link>
       </header>
 

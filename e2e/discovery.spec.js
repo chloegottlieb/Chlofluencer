@@ -1,6 +1,6 @@
 // Implements features/discovery.feature
 import { expect, test } from '@playwright/test';
-import { apiPostStory, apiSignup, authed, openAs, viewer } from './helpers.js';
+import { apiPostStory, apiSignup, authed, currentAuthor, openAs, viewer } from './helpers.js';
 
 test.describe('Feature: For You discovery of new creators', () => {
   test('Follow a creator straight from their story', async ({ page, request }) => {
@@ -8,7 +8,7 @@ test.describe('Feature: For You discovery of new creators', () => {
     await openAs(page, me.token);
     await page.getByRole('button', { name: 'Start watching' }).click();
     await expect(viewer(page)).toHaveAttribute('data-kind', 'discover');
-    const creator = (await viewer(page).locator('.viewer-username').textContent()).trim();
+    const creator = await currentAuthor(page);
     await page.getByRole('button', { name: 'Follow', exact: true }).click();
     await expect(page.getByText(`Following ${creator}`)).toBeVisible();
     await page.getByRole('button', { name: 'Close stories' }).click();
@@ -19,7 +19,7 @@ test.describe('Feature: For You discovery of new creators', () => {
     const me = await apiSignup(request, 'picky');
     await openAs(page, me.token);
     await page.getByRole('button', { name: 'Start watching' }).click();
-    const creator = (await viewer(page).locator('.viewer-username').textContent()).trim();
+    const creator = await currentAuthor(page);
     await page.getByRole('button', { name: 'More options' }).click();
     await page.getByRole('menuitem', { name: 'Not interested' }).click();
     await page.getByRole('button', { name: 'Close stories' }).click();

@@ -107,7 +107,7 @@ describe('Settings', () => {
     fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'password2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Change password' }));
     expect(await screen.findByText(/Password changed/)).toBeInTheDocument();
-    expect(localStorage.getItem('cf_token')).toBe('fresh');
+    expect(localStorage.getItem('storytime_token')).toBe('fresh');
   });
 });
 

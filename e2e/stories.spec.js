@@ -1,6 +1,6 @@
 // Implements features/stories.feature
 import { expect, test } from '@playwright/test';
-import { apiLogin, apiPostStory, apiSignup, authed, openAs, tapNext, tapPrev, viewer } from './helpers.js';
+import { apiLogin, apiPostStory, apiSignup, authed, currentAuthor, openAs, tapNext, tapPrev, viewer } from './helpers.js';
 
 let me;
 let friendA;
@@ -42,14 +42,13 @@ test.describe('Feature: Instagram-style tap-through stories', () => {
     await expect(viewer(page)).toHaveAttribute('data-kind', 'discover');
     await expect(page.getByTestId('for-you-chip')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Follow', exact: true })).toBeVisible();
-    const firstCreator = await viewer(page).locator('.viewer-username').textContent();
+    const firstCreator = await currentAuthor(page);
     // Tap through the first creator's stories and into the next recommendation.
     for (let i = 0; i < 5; i++) {
       await tapNext(page);
-      const current = await viewer(page).locator('.viewer-username').textContent();
-      if (current !== firstCreator) break;
+      if ((await currentAuthor(page)) !== firstCreator) break;
     }
-    await expect(viewer(page).locator('.viewer-username')).not.toHaveText(firstCreator);
+    await expect(viewer(page)).not.toHaveAttribute('data-author', firstCreator);
     await expect(viewer(page)).toHaveAttribute('data-kind', 'discover');
   });
 

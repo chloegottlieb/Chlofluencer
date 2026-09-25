@@ -33,7 +33,7 @@ export default function Signup() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={submit}>
-        <h1 className="logo big">Chlofluencer</h1>
+        <h1 className="logo big">Storytime</h1>
         <p className="muted center">Sign up to share stories and discover creators.</p>
         {error && <p className="form-error" role="alert">{error}</p>}
         <label>

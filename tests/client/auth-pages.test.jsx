@@ -24,7 +24,7 @@ describe('auth gate', () => {
     mockApi({ 'GET /auth/me': fail(401, 'Session expired') });
     renderApp(<App />);
     expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
-    expect(localStorage.getItem('cf_token')).toBeNull();
+    expect(localStorage.getItem('storytime_token')).toBeNull();
   });
 });
 
@@ -36,7 +36,7 @@ describe('Login page', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
     expect(await screen.findByText('Your story')).toBeInTheDocument();
-    expect(localStorage.getItem('cf_token')).toBe('abc');
+    expect(localStorage.getItem('storytime_token')).toBe('abc');
     expect(JSON.parse(calls(fetchMock, 'POST', /auth\/login/)[0][1].body)).toEqual({ login: 'demo', password: 'password123' });
   });
 

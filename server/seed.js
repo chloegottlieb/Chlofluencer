@@ -229,7 +229,7 @@ export function seedDemoData(db, { now = Date.now(), uploadDir }) {
     authorId: users.demo.id,
     type: 'text',
     mediaUrl: null,
-    text: 'My very first story on Chlofluencer ✨',
+    text: 'My very first story on Storytime ✨',
     background: cssGradient(GRADIENTS[4]),
     caption: '',
     tags: ['firstpost'],

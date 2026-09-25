@@ -340,6 +340,7 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
       data-testid="story-viewer"
       data-kind={group.kind}
       data-story-id={story.id}
+      data-author={group.author?.username ?? ''}
       data-paused={effectivelyPaused ? 'true' : 'false'}
     >
       <div className="viewer-stage">

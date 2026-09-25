@@ -1,5 +1,5 @@
 /**
- * The Chlofluencer feed algorithm.
+ * The Storytime feed algorithm.
  *
  * The feed is one continuous tap-through queue in two phases:
  *   1. Friends  – active stories from accounts you follow (unseen first).

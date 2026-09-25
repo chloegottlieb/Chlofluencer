@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'cf_token';
+const TOKEN_KEY = 'storytime_token';
 
 export class ApiError extends Error {
   constructor(status, message, field) {

@@ -23,7 +23,7 @@ export default function Login() {
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={submit}>
-        <h1 className="logo big">Chlofluencer</h1>
+        <h1 className="logo big">Storytime</h1>
         <p className="muted center">Stories from friends. Then, the world.</p>
         {error && <p className="form-error" role="alert">{error}</p>}
         <label>

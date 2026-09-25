@@ -38,10 +38,12 @@ export async function apiPostStory(request, token, fields = {}) {
 
 /** Open the app already logged in with the given token. */
 export async function openAs(page, token, path = '/') {
-  await page.addInitScript((t) => window.localStorage.setItem('cf_token', t), token);
+  await page.addInitScript((t) => window.localStorage.setItem('storytime_token', t), token);
   await page.goto(path);
 }
 
 export const viewer = (page) => page.getByTestId('story-viewer');
+/** Username of the creator currently playing (without the verified badge). */
+export const currentAuthor = (page) => viewer(page).getAttribute('data-author');
 export const tapNext = (page) => page.getByRole('button', { name: 'Next story' }).click();
 export const tapPrev = (page) => page.getByRole('button', { name: 'Previous story' }).click();

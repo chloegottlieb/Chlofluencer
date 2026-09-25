@@ -328,3 +328,17 @@ legend { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .media-choices { display: flex; flex-direction: column; gap: 10px; width: 80%; }
 
 .row-center { display: flex; justify-content: center; gap: 16px; }
+
+/* Hands-free */
+.handsfree-options { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.option-group { display: flex; align-items: center; gap: 6px; }
+.option-label { font-size: 12px; opacity: 0.8; width: 72px; text-align: right; margin-right: 4px; }
+.option-group .chip { background: rgba(255, 255, 255, 0.15); color: #fff; border: 0; }
+.option-group .chip.selected { background: #fff; color: #000; }
+.shutter.handsfree { background: var(--danger); }
+.shutter.counting { background: rgba(255, 255, 255, 0.25); animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.25); } }
+.countdown { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(0, 0, 0, 0.25); pointer-events: none; }
+.countdown-number { font-size: 160px; font-weight: 800; line-height: 1; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); animation: count-in 1s ease-out; }
+.countdown-hint { font-size: 14px; opacity: 0.9; }
+@keyframes count-in { from { transform: scale(1.6); opacity: 0; } 20% { opacity: 1; } to { transform: scale(1); } }

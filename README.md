@@ -15,7 +15,7 @@ Storytime is a social app built around 24-hour stories. You tap through them lik
 | **Tap-through viewer** | Full-screen 9:16 stories with segmented progress bars. Tap the right side to go forward and the left side to go back. Press and hold to pause, swipe down or press Esc to close, and swipe left or right to skip a creator. Arrow keys and the space bar also work. Photos, videos and text-on-gradient stories are supported. |
 | **Friends → For You** | Friends with unseen stories come first (their newest first). Then a "You're all caught up" card, then an endless, paginated queue of recommended strangers' stories labelled **For You** with a reason ("Because you're into #travel", "Trending", "Just posted", "New creator"). |
 | **Discovery algorithm** | Ranks by declared interests, what you like, reply to and finish watching, creator affinity, engagement, popularity and freshness. It diversifies topics and adds a little seeded exploration. It never shows private accounts, followers-only stories, sensitive stories (if filtered), or creators you blocked, muted or marked "Not interested". |
-| **In-app camera** | Take photos or record videos (up to 60 s) without leaving the app. Tap the shutter for a photo, or press and hold (or switch to Video) to record. You can flip between front and back cameras, and the selfie preview is mirrored. Review the shot, then choose **Retake** or **Use**. **Choose from camera roll** is always available too. |
+| **In-app camera** | Take photos or record videos (up to 60 s) without leaving the app. Tap the shutter for a photo, or press and hold (or switch to Video) to record. You can flip between front and back cameras, and the selfie preview is mirrored. Review the shot, then choose **Retake** or **Use**. **Hands-free** mode lets you tap once, then a countdown (off, 3 s or 10 s) gives you time to prop the phone up and step back. Recording starts by itself and stops by itself after the length you pick (15, 30 or 60 s), or you can tap to stop early. The camera remembers your hands-free choices on each device. **Choose from camera roll** is always available too. |
 | **Direct messages** | People who **follow each other** can DM, and a story reply between them lands in their conversation with a preview of the story. With a **one-way or no connection**, you can only send a **one-way story reply**. It lands in the creator's Activity → Story replies inbox, and they can't reply back. If a follow is dropped or someone blocks, the conversation stays readable but you can't send new messages. Shows unread badges and "Seen" receipts. |
 | **Creator tools** | Post photo, video (up to 60 s) or text stories with captions, hashtags, audience (Everyone / Followers) and a "Show in For You" switch. Story insights show views, views that came from For You, likes, and the viewer list. |
 | **Highlights** | Save any of your stories, active or expired, to named highlights from the viewer or from your private **Archive**. Rename, reorder the cover, add, remove, and delete. Highlights stay on your profile permanently. |
@@ -155,7 +155,7 @@ npm run test:all         # everything
 
 > On Linux CI machines, use `npx playwright install --with-deps chromium` to also install the system libraries Chromium needs.
 
-The current suite has **320** unit, API and component tests plus **34** end-to-end scenarios.
+The current suite has **331** unit, API and component tests plus **37** end-to-end scenarios.
 
 ---
 
@@ -381,6 +381,28 @@ Feature: Posting stories and saving highlights
     When I tap the shutter again after a couple of seconds
     And I tap "Use video" and share it
     Then my story plays the video for as long as I recorded
+
+  Scenario: Record hands-free with a countdown
+    Given the in-app camera is open
+    When I switch to "Hands-free"
+    And I choose a "3s" countdown and a "15s" length
+    And I tap the shutter once and step back
+    Then I see a 3-2-1 countdown
+    And recording starts by itself when it reaches zero
+    And the timer shows "0:00 / 0:15"
+    And recording stops by itself after 15 seconds
+    When I tap "Use video" and share it
+    Then my story plays the 15-second video
+
+  Scenario: Cancel a hands-free countdown
+    Given I started a hands-free countdown
+    When I tap the shutter before it reaches zero
+    Then the countdown stops and nothing is recorded
+
+  Scenario: Hands-free settings are remembered
+    Given I chose a "10s" countdown and "60s" length
+    When I open the camera again later
+    Then hands-free still uses a 10s countdown and 60s length
 
   Scenario: Retake and flip the camera
     Given the in-app camera is open
@@ -638,5 +660,5 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 - Storage is a single JSON file. That's fine for demos and small groups. Swap `server/db.js` for Postgres or SQLite before real traffic, since the rest of the server only uses its small `find/filter/insert/update/remove` interface.
 - Media is stored on local disk with no transcoding. A real deployment would use object storage (S3 or similar) and a CDN.
 - There are no real-time updates over WebSockets. Open conversations check for new messages every 4 seconds, the unread badge every 15 seconds, and the feed refreshes when you close the viewer or navigate.
-- The camera has no filters, zoom, flash or text/sticker editing yet. Recorded videos are uploaded as the browser recorded them (MP4 on Safari and recent Chrome, WebM on older Chrome and Firefox). Older iPhones may not play WebM stories.
+- The camera has no filters, zoom, flash or text/sticker editing yet, and hands-free doesn't respond to voice commands. Recorded videos are uploaded as the browser recorded them (MP4 on Safari and recent Chrome, WebM on older Chrome and Firefox). Older iPhones may not play WebM stories.
 - DMs are text-only. Photos and voice notes in DMs, message requests, reporting and content moderation, close-friends lists, stickers and music (Spotify) are natural next features.

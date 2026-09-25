@@ -74,6 +74,67 @@ test.describe('Feature: Posting stories and saving highlights', () => {
     await expect(page.getByTestId('story-video')).toBeVisible();
   });
 
+  test('Record hands-free with a countdown', async ({ page, request }) => {
+    test.slow(); // really waits for the 3s countdown + 15s recording
+    const me = await apiSignup(request, 'handsfree');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    const camera = page.getByTestId('camera');
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('radio', { name: 'Hands-free' }).click();
+    await page.getByRole('radio', { name: '3s' }).click();
+    await page.getByRole('radio', { name: '15s' }).click();
+    await page.getByRole('button', { name: 'Start hands-free recording' }).click();
+    // Hands off from here on.
+    await expect(page.getByTestId('countdown')).toContainText('3');
+    await expect(page.getByTestId('countdown')).toContainText('1', { timeout: 4000 });
+    await expect(camera).toHaveAttribute('data-status', 'recording', { timeout: 4000 });
+    await expect(page.getByRole('timer')).toContainText('/ 0:15');
+    await expect(camera).toHaveAttribute('data-status', 'review', { timeout: 20_000 });
+    await page.getByRole('button', { name: 'Use video' }).click();
+    await page.getByRole('button', { name: 'Share to your story' }).click();
+    await expect(page.getByRole('region', { name: 'Stories' })).toBeVisible();
+    const { stories } = await (await authed(request, me.token).get('/stories/mine')).json();
+    expect(stories[0].type).toBe('video');
+    // Stopped by itself at the 15s limit (the file's own length may be a few ms shorter).
+    expect(stories[0].durationMs).toBeGreaterThan(14_000);
+    expect(stories[0].durationMs).toBeLessThanOrEqual(15_000);
+  });
+
+  test('Cancel a hands-free countdown', async ({ page, request }) => {
+    const me = await apiSignup(request, 'cancel');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    const camera = page.getByTestId('camera');
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await page.getByRole('radio', { name: 'Hands-free' }).click();
+    await page.getByRole('radio', { name: '10s' }).click();
+    await page.getByRole('button', { name: 'Start hands-free recording' }).click();
+    await expect(page.getByTestId('countdown')).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel countdown' }).click();
+    await expect(camera).toHaveAttribute('data-status', 'ready');
+    await expect(page.getByTestId('countdown')).toHaveCount(0);
+  });
+
+  test('Hands-free settings are remembered', async ({ page, request }) => {
+    const me = await apiSignup(request, 'remember');
+    await openAs(page, me.token, '/create');
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    await page.getByRole('radio', { name: 'Hands-free' }).click();
+    await page.getByRole('radio', { name: '10s' }).click();
+    await page.getByRole('radio', { name: '60s' }).click();
+    await page.getByRole('button', { name: 'Close camera' }).click();
+    await page.reload();
+    await page.getByRole('tab', { name: /Photo/ }).click();
+    await page.getByRole('button', { name: /Open camera/ }).click();
+    await page.getByRole('radio', { name: 'Hands-free' }).click();
+    await expect(page.getByRole('radio', { name: '10s' })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByRole('radio', { name: '60s' })).toHaveAttribute('aria-checked', 'true');
+  });
+
   test('Retake and flip the camera', async ({ page, request }) => {
     const me = await apiSignup(request, 'flip');
     await openAs(page, me.token, '/create');

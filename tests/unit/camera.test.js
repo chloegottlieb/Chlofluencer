@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_HANDS_FREE,
+  HANDS_FREE_DELAYS,
+  HANDS_FREE_LENGTHS,
   baseMimeType,
   cameraErrorMessage,
   cameraSupported,
   cropTo916,
   extensionFor,
   formatRecordingTime,
+  loadHandsFreePrefs,
   pickRecorderMimeType,
+  saveHandsFreePrefs,
 } from '../../client/src/lib/camera.js';
 
 describe('pickRecorderMimeType', () => {
@@ -68,5 +73,40 @@ describe('formatRecordingTime', () => {
     expect(formatRecordingTime(0)).toBe('0:00');
     expect(formatRecordingTime(9_900)).toBe('0:09');
     expect(formatRecordingTime(60_000)).toBe('0:60');
+  });
+});
+
+describe('hands-free preferences', () => {
+  const memoryStorage = (initial = {}) => {
+    const data = { ...initial };
+    return { getItem: (k) => data[k] ?? null, setItem: (k, v) => (data[k] = v), data };
+  };
+
+  it('defaults to a 3s countdown and 15s length', () => {
+    expect(loadHandsFreePrefs(memoryStorage())).toEqual({ delaySec: 3, lengthSec: 15 });
+    expect(DEFAULT_HANDS_FREE).toEqual({ delaySec: 3, lengthSec: 15 });
+  });
+
+  it('round-trips saved preferences', () => {
+    const storage = memoryStorage();
+    saveHandsFreePrefs({ delaySec: 10, lengthSec: 60 }, storage);
+    expect(loadHandsFreePrefs(storage)).toEqual({ delaySec: 10, lengthSec: 60 });
+  });
+
+  it('ignores invalid or corrupt values', () => {
+    expect(loadHandsFreePrefs(memoryStorage({ storytime_handsfree: '{"delaySec":7,"lengthSec":999}' }))).toEqual({ delaySec: 3, lengthSec: 15 });
+    expect(loadHandsFreePrefs(memoryStorage({ storytime_handsfree: 'not json' }))).toEqual({ delaySec: 3, lengthSec: 15 });
+    expect(loadHandsFreePrefs(memoryStorage({ storytime_handsfree: '{"delaySec":0}' }))).toEqual({ delaySec: 0, lengthSec: 15 });
+  });
+
+  it('survives storage that throws', () => {
+    const broken = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+    expect(loadHandsFreePrefs(broken)).toEqual({ delaySec: 3, lengthSec: 15 });
+    expect(() => saveHandsFreePrefs({ delaySec: 3, lengthSec: 15 }, broken)).not.toThrow();
+  });
+
+  it('offers Off/3s/10s countdowns and 15/30/60s lengths within the 60s cap', () => {
+    expect(HANDS_FREE_DELAYS).toEqual([0, 3, 10]);
+    expect(HANDS_FREE_LENGTHS).toEqual([15, 30, 60]);
   });
 });

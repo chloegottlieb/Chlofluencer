@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CameraCapture from '../../client/src/components/CameraCapture.jsx';
 
@@ -152,5 +152,90 @@ describe('CameraCapture', () => {
     await waitFor(() => expect(status()).toBe('ready'));
     fireEvent.click(screen.getByRole('button', { name: 'Close camera' }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('CameraCapture hands-free mode', () => {
+  afterEach(() => vi.useRealTimers());
+
+  // Each countdown tick is scheduled after React re-renders, so step 1s at a time.
+  const tick = async (seconds) => {
+    for (let i = 0; i < seconds; i++) await act(async () => vi.advanceTimersByTime(1000));
+  };
+
+  async function readyHandsFree() {
+    const props = renderCamera();
+    await waitFor(() => expect(status()).toBe('ready'));
+    fireEvent.click(screen.getByRole('radio', { name: 'Hands-free' }));
+    return props;
+  }
+
+  it('shows countdown and length options with defaults 3s / 15s', async () => {
+    await readyHandsFree();
+    expect(screen.getByRole('radiogroup', { name: 'Countdown' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '3s' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: '15s' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText(/starts after 3s, stops by itself after 15s/)).toBeInTheDocument();
+  });
+
+  it('counts down, records, and stops on its own after the chosen length', async () => {
+    const { onCapture } = await readyHandsFree();
+    fireEvent.click(screen.getByRole('radio', { name: '30s' }));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    fireEvent.click(screen.getByRole('button', { name: 'Start hands-free recording' }));
+    expect(status()).toBe('countdown');
+    expect(screen.getByTestId('countdown')).toHaveTextContent('3');
+    // No recording yet while counting down.
+    expect(FakeRecorder.last?.state).not.toBe('recording');
+    await tick(1);
+    expect(screen.getByTestId('countdown')).toHaveTextContent('2');
+    await tick(2);
+    expect(status()).toBe('recording');
+    expect(screen.getByRole('timer')).toHaveTextContent('0:00 / 0:30');
+    // Nobody touches the phone: it stops by itself at 30s.
+    await act(async () => vi.advanceTimersByTime(29_000));
+    expect(status()).toBe('recording');
+    await act(async () => vi.advanceTimersByTime(1_400));
+    expect(status()).toBe('review');
+    fireEvent.click(screen.getByRole('button', { name: 'Use video' }));
+    expect(onCapture.mock.calls[0][1]).toEqual({ durationMs: 30_000, kind: 'video' });
+  });
+
+  it('can be stopped early by tapping', async () => {
+    await readyHandsFree();
+    fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start hands-free recording' }));
+    expect(status()).toBe('recording');
+    fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
+    expect(status()).toBe('review');
+  });
+
+  it('tapping during the countdown cancels it', async () => {
+    await readyHandsFree();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Start hands-free recording' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel countdown' }));
+    expect(status()).toBe('ready');
+    await tick(5);
+    expect(status()).toBe('ready');
+  });
+
+  it('locks mode, flip and camera roll while counting down', async () => {
+    await readyHandsFree();
+    fireEvent.click(screen.getByRole('button', { name: 'Start hands-free recording' }));
+    expect(screen.getByRole('button', { name: 'Flip camera' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Camera roll' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Photo' })).toBeDisabled();
+  });
+
+  it('remembers the chosen countdown and length', async () => {
+    await readyHandsFree();
+    fireEvent.click(screen.getByRole('radio', { name: '10s' }));
+    fireEvent.click(screen.getByRole('radio', { name: '60s' }));
+    expect(JSON.parse(localStorage.getItem('storytime_handsfree'))).toEqual({ delaySec: 10, lengthSec: 60 });
+    cleanup();
+    await readyHandsFree();
+    expect(screen.getByRole('radio', { name: '10s' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: '60s' })).toHaveAttribute('aria-checked', 'true');
   });
 });

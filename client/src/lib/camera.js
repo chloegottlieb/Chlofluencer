@@ -55,3 +55,33 @@ export function formatRecordingTime(ms) {
   const s = Math.floor(ms / 1000);
   return `0:${String(s).padStart(2, '0')}`;
 }
+
+// --- Hands-free recording ---------------------------------------------------
+// Tap once: a countdown gives you time to prop the phone up, then recording
+// starts on its own and stops on its own after the chosen length.
+
+export const HANDS_FREE_DELAYS = [0, 3, 10];
+export const HANDS_FREE_LENGTHS = [15, 30, 60];
+export const DEFAULT_HANDS_FREE = { delaySec: 3, lengthSec: 15 };
+const PREFS_KEY = 'storytime_handsfree';
+
+/** Remembered per device; falls back to defaults if missing or invalid. */
+export function loadHandsFreePrefs(storage = globalThis.localStorage) {
+  try {
+    const saved = JSON.parse(storage?.getItem(PREFS_KEY) ?? 'null') ?? {};
+    return {
+      delaySec: HANDS_FREE_DELAYS.includes(saved.delaySec) ? saved.delaySec : DEFAULT_HANDS_FREE.delaySec,
+      lengthSec: HANDS_FREE_LENGTHS.includes(saved.lengthSec) ? saved.lengthSec : DEFAULT_HANDS_FREE.lengthSec,
+    };
+  } catch {
+    return { ...DEFAULT_HANDS_FREE };
+  }
+}
+
+export function saveHandsFreePrefs(prefs, storage = globalThis.localStorage) {
+  try {
+    storage?.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* storage unavailable (private mode etc.) — preference just isn't remembered */
+  }
+}

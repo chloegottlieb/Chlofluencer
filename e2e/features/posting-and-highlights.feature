@@ -32,6 +32,28 @@ Feature: Posting stories and saving highlights
     And I tap "Use video" and share it
     Then my story plays the video for as long as I recorded
 
+  Scenario: Record hands-free with a countdown
+    Given the in-app camera is open
+    When I switch to "Hands-free"
+    And I choose a "3s" countdown and a "15s" length
+    And I tap the shutter once and step back
+    Then I see a 3-2-1 countdown
+    And recording starts by itself when it reaches zero
+    And the timer shows "0:00 / 0:15"
+    And recording stops by itself after 15 seconds
+    When I tap "Use video" and share it
+    Then my story plays the 15-second video
+
+  Scenario: Cancel a hands-free countdown
+    Given I started a hands-free countdown
+    When I tap the shutter before it reaches zero
+    Then the countdown stops and nothing is recorded
+
+  Scenario: Hands-free settings are remembered
+    Given I chose a "10s" countdown and "60s" length
+    When I open the camera again later
+    Then hands-free still uses a 10s countdown and 60s length
+
   Scenario: Retake and flip the camera
     Given the in-app camera is open
     When I tap "Flip camera"

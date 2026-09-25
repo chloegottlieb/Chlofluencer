@@ -5,7 +5,7 @@
   "description": "Stories-first social app: tap through your friends' 24-hour stories, then keep tapping into a For You feed of new creators.",
   "type": "module",
   "engines": {
-    "node": ">=20.10"
+    "node": ">=22.13"
   },
   "scripts": {
     "dev": "concurrently -k -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
@@ -20,9 +20,17 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npm run build && playwright test",
-    "test:all": "npm test && npm run test:e2e"
+    "test:all": "npm test && npm run test:e2e",
+    "backup": "node server/backup.js",
+    "build:mobile": "node scripts/check-mobile-env.js && vite build --mode mobile && cap sync",
+    "ios": "npm run build:mobile && cap open ios",
+    "android": "npm run build:mobile && cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
     "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
@@ -32,6 +40,8 @@
     "react-router-dom": "^7.9.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.2",
     "@playwright/test": "1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

@@ -30,6 +30,8 @@ export function serializeStory(db, story, viewerId, { stats, now } = {}) {
     repliesSetting: authorSettings.privacy.storyReplies,
     // Mutuals' story replies go to DMs; everyone else's are one-way.
     replyMode: !isOwner && isMutual(db, viewerId, story.authorId) ? 'dm' : 'reply',
+    // Only the author learns that a story is under review or was removed.
+    moderation: isOwner ? (story.moderation?.status ?? null) : undefined,
     likedByMe: !!db.find('likes', (l) => l.storyId === story.id && l.userId === viewerId),
     seenByMe: !!db.find('views', (v) => v.storyId === story.id && v.viewerId === viewerId),
   };

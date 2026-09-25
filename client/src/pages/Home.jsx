@@ -6,6 +6,7 @@ import Avatar from '../components/Avatar.jsx';
 import MessagesLink from '../components/MessagesLink.jsx';
 import StoryViewer from '../components/StoryViewer.jsx';
 import { buildQueue, markSeen } from '../lib/player.js';
+import { mediaUrl } from '../lib/media.js';
 
 export default function Home() {
   const { user } = useAuth();
@@ -118,7 +119,7 @@ export default function Home() {
                     onClick={() => open(`discover:${g.author.id}`)}
                     style={{ background: cover.background }}
                   >
-                    {cover.type === 'image' && <img src={cover.mediaUrl} alt="" />}
+                    {cover.type === 'image' && <img src={mediaUrl(cover.mediaUrl)} alt="" />}
                     {cover.type === 'text' && <span className="discover-text">{cover.text}</span>}
                     {cover.type === 'video' && <span className="discover-text">▶ Video</span>}
                     <span className="discover-overlay">

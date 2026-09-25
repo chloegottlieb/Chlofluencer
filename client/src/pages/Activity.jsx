@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Avatar from '../components/Avatar.jsx';
+import ReportSheet from '../components/ReportSheet.jsx';
 import { timeAgo } from '../lib/time.js';
 
 const MESSAGES = {
@@ -12,11 +13,14 @@ const MESSAGES = {
   follow_accepted: 'accepted your follow request.',
 };
 
+const SAFETY = { username: 'Storytime Safety', displayName: 'Storytime Safety', avatarUrl: null };
+
 export default function Activity() {
   const [tab, setTab] = useState('notifications');
   const [notifications, setNotifications] = useState(null);
   const [replies, setReplies] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [reporting, setReporting] = useState(null);
 
   const load = () => {
     api('/notifications').then((d) => {
@@ -35,6 +39,15 @@ export default function Activity() {
 
   return (
     <div className="page">
+      {reporting && (
+        <ReportSheet
+          targetType="reply"
+          targetId={reporting.id}
+          username={reporting.from.username}
+          onClose={() => setReporting(null)}
+          onDone={(res) => res.blocked && setReplies((list) => list.filter((x) => x.from.id !== reporting.from.id))}
+        />
+      )}
       <header className="top-bar">
         <h1>Activity</h1>
       </header>
@@ -70,16 +83,26 @@ export default function Activity() {
           <p className="muted center">No activity yet. Post a story to get started!</p>
         ) : (
           <ul className="list" aria-label="Notifications">
-            {notifications.map((n) => (
-              <li key={n.id} className={`list-row ${n.read ? '' : 'unread'}`}>
-                <Avatar user={n.actor} size={40} />
-                <span className="grow">
-                  <Link to={`/u/${n.actor.username}`}><strong>{n.actor.username}</strong></Link> {MESSAGES[n.type]}
-                  {n.text && <span className="quote"> “{n.text}”</span>}
-                  <span className="muted"> {timeAgo(n.createdAt)}</span>
-                </span>
-              </li>
-            ))}
+            {notifications.map((n) =>
+              n.actor ? (
+                <li key={n.id} className={`list-row ${n.read ? '' : 'unread'}`}>
+                  <Avatar user={n.actor} size={40} />
+                  <span className="grow">
+                    <Link to={`/u/${n.actor.username}`}><strong>{n.actor.username}</strong></Link> {MESSAGES[n.type]}
+                    {n.text && <span className="quote"> “{n.text}”</span>}
+                    <span className="muted"> {timeAgo(n.createdAt)}</span>
+                  </span>
+                </li>
+              ) : (
+                <li key={n.id} className={`list-row ${n.read ? '' : 'unread'}`} data-testid="safety-notice">
+                  <Avatar user={SAFETY} size={40} />
+                  <span className="grow">
+                    <strong>Storytime Safety</strong> {n.text}
+                    <span className="muted"> {timeAgo(n.createdAt)}</span>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )
       ) : replies.length === 0 ? (
@@ -93,14 +116,14 @@ export default function Activity() {
               <Avatar user={r.from} size={40} />
               <span className="grow">
                 <Link to={`/u/${r.from.username}`}><strong>{r.from.username}</strong></Link>
-                <br />
-                {r.text}
-                <br />
+                <span className="reply-text">{r.text}</span>
                 {r.canMessage ? (
                   <Link to={`/messages/${r.from.username}`} className="small-text">Message {r.from.username}</Link>
                 ) : (
                   <span className="muted small-text">One-way reply · follow each other to chat</span>
                 )}
+                {' · '}
+                <button type="button" className="link-btn small-text danger" onClick={() => setReporting(r)}>Report</button>
               </span>
               <span className="muted">{timeAgo(r.createdAt)}</span>
             </li>

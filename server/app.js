@@ -10,7 +10,10 @@ import highlightRoutes from './routes/highlights.js';
 import settingsRoutes from './routes/settings.js';
 import notificationRoutes from './routes/notifications.js';
 import messageRoutes from './routes/messages.js';
+import moderationRoutes from './routes/moderation.js';
 import { createUploader } from './uploads.js';
+import { appRateLimits, cors, securityHeaders } from './security.js';
+import { NATIVE_APP_ORIGINS } from './config.js';
 
 /**
  * Build the Express app. All external state (database, clock, upload dir) is
@@ -22,15 +25,28 @@ export function createApp({
   uploadDir = path.resolve('data/uploads'),
   clientDir = null,
   now = () => Date.now(),
+  corsOrigins = NATIVE_APP_ORIGINS,
+  rateLimits = true,
+  trustProxy = false,
+  isProd = false,
+  moderators = [],
+  supportEmail = 'support@example.com',
 } = {}) {
   const app = express();
-  const ctx = { db, secret, uploadDir, now, upload: createUploader(uploadDir) };
-  ctx.auth = requireAuth({ db, secret });
+  const limits = appRateLimits({ enabled: rateLimits });
+  const ctx = { db, secret, uploadDir, now, upload: createUploader(uploadDir), limits, moderators, supportEmail };
+  const requireUser = requireAuth({ db, secret, moderators });
+  // Signed-in routes: authenticate, then rate-limit anything that writes.
+  ctx.auth = [requireUser, (req, res, next) => (req.method === 'GET' ? next() : limits.write(req, res, next))];
 
   app.disable('x-powered-by');
+  if (trustProxy) app.set('trust proxy', 1);
+  app.use(securityHeaders({ hsts: isProd }));
+  app.use(cors(corsOrigins));
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.get('/api/config', (_req, res) => res.json({ supportEmail }));
   app.use('/api/auth', authRoutes(ctx));
   app.use('/api/users', userRoutes(ctx));
   app.use('/api/stories', storyRoutes(ctx));
@@ -39,6 +55,9 @@ export function createApp({
   app.use('/api/settings', settingsRoutes(ctx));
   app.use('/api/notifications', notificationRoutes(ctx));
   app.use('/api/messages', messageRoutes(ctx));
+  const moderation = moderationRoutes(ctx);
+  app.use('/api/reports', moderation.reports);
+  app.use('/api/moderation', moderation.mod);
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Not found')));
 
   fs.mkdirSync(uploadDir, { recursive: true });

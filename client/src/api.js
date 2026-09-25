@@ -1,3 +1,5 @@
+import { API_ORIGIN } from './lib/media.js';
+
 const TOKEN_KEY = 'storytime_token';
 
 export class ApiError extends Error {
@@ -45,7 +47,7 @@ export async function api(path, { method = 'GET', body, form, signal } = {}) {
     headers['Content-Type'] = 'application/json';
     payload = JSON.stringify(body);
   }
-  const res = await fetch(`/api${path}`, { method, headers, body: payload, signal });
+  const res = await fetch(`${API_ORIGIN}/api${path}`, { method, headers, body: payload, signal });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     if (res.status === 401 && token) unauthorizedHandler?.();

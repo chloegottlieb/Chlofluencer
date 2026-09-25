@@ -342,3 +342,48 @@ legend { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .countdown-number { font-size: 160px; font-weight: 800; line-height: 1; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5); animation: count-in 1s ease-out; }
 .countdown-hint { font-size: 14px; opacity: 0.9; }
 @keyframes count-in { from { transform: scale(1.6); opacity: 0; } 20% { opacity: 1; } to { transform: scale(1); } }
+
+/* ---------- Reporting & moderation ---------- */
+.reason-row { color: var(--text); padding: 12px 0; border-bottom: 1px solid var(--border); }
+.report-done { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.report-icon { font-size: 44px; }
+.moderation-banner { position: absolute; left: 12px; right: 12px; top: 72px; z-index: 3; background: rgba(237, 73, 86, 0.92); color: #fff; padding: 8px 12px; border-radius: 10px; font-size: 13px; text-align: center; }
+.moderation-banner.hidden-review { background: rgba(245, 158, 11, 0.92); }
+.tile-flag { position: absolute; bottom: 4px; left: 4px; right: 4px; background: rgba(237, 73, 86, 0.9); color: #fff; font-size: 10px; padding: 2px 4px; border-radius: 4px; }
+.bubble-actions { font-size: 11px; }
+.bubble-actions button { background: none; border: 0; color: var(--muted); padding: 0 6px; font-size: 11px; }
+.mod-card { border: 1px solid var(--border); border-radius: 14px; padding: 12px; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; background: var(--surface); }
+.mod-card header { display: flex; align-items: center; gap: 8px; }
+.mod-preview { display: flex; gap: 10px; align-items: flex-start; }
+.mod-thumb { width: 72px; aspect-ratio: 9 / 16; border-radius: 8px; overflow: hidden; display: grid; place-items: center; color: #fff; font-size: 9px; font-weight: 700; padding: 4px; text-align: center; position: relative; flex-shrink: 0; }
+.mod-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mod-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.mod-reports { font-size: 13px; }
+.mod-reports li { padding: 4px 0; border-top: 1px solid var(--border); }
+.state-chip { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+.state-chip.hidden { background: #f59e0b; color: #000; }
+.state-chip.removed, .state-chip.deleted { background: var(--danger); color: #fff; }
+.terms-check { flex-direction: row; align-items: flex-start; gap: 8px; color: var(--text); font-size: 13px; }
+.terms-check input { width: auto; margin-top: 2px; }
+.legal { line-height: 1.55; }
+.legal h2 { font-size: 17px; margin: 22px 0 6px; }
+.legal h3 { font-size: 15px; margin: 16px 0 4px; }
+.legal li { margin: 4px 0; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.legal td, .legal th { border: 1px solid var(--border); padding: 6px; text-align: left; vertical-align: top; }
+.legal-placeholder { background: #f59e0b; color: #000; padding: 0 3px; border-radius: 3px; }
+.reply-text { display: block; margin: 2px 0; }
+
+.camera-primer { position: relative; z-index: 2; max-width: 340px; padding: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.camera-primer p { margin: 0; line-height: 1.45; }
+.primer-emoji { font-size: 72px; }
+
+/* ---------- Native app safe areas (notch / home indicator) ---------- */
+body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0); background: var(--bg); z-index: 20; }
+.app-shell { padding-top: env(safe-area-inset-top, 0); }
+.top-bar { top: env(safe-area-inset-top, 0); }
+.bottom-nav { height: calc(60px + env(safe-area-inset-bottom, 0)); }
+.viewer-top, .camera-top { padding-top: calc(8px + env(safe-area-inset-top, 0)); }
+.viewer-footer { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0)); }
+.composer { bottom: calc(60px + env(safe-area-inset-bottom, 0)); }
+.auth-page { padding-top: calc(24px + env(safe-area-inset-top, 0)); }

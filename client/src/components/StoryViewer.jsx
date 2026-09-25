@@ -16,6 +16,7 @@ import {
 import { timeAgo } from '../lib/time.js';
 import Avatar from './Avatar.jsx';
 import HighlightPicker from './HighlightPicker.jsx';
+import ReportSheet from './ReportSheet.jsx';
 import StoryContent from './StoryContent.jsx';
 import ViewersSheet from './ViewersSheet.jsx';
 
@@ -40,7 +41,7 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
   const [paused, setPaused] = useState(false);
   const [held, setHeld] = useState(false);
   const [muted, setMuted] = useState(!!playback.muteByDefault);
-  const [panel, setPanel] = useState(null); // 'menu' | 'highlight' | 'viewers'
+  const [panel, setPanel] = useState(null); // 'menu' | 'highlight' | 'viewers' | 'report'
   const [replyFocused, setReplyFocused] = useState(false);
   const [reply, setReply] = useState('');
   const [toast, setToast] = useState('');
@@ -55,6 +56,7 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
   const suppressClickRef = useRef(false);
   const pointerStartRef = useRef(null);
   const videoRef = useRef(null);
+  const skipAfterReportRef = useRef(false);
 
   const group = cursor ? queue[cursor.g] : null;
   const story = currentStory(queue, cursor);
@@ -483,6 +485,13 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
           </div>
         )}
 
+        {isOwn && story.moderation && (
+          <div className={`moderation-banner ${story.moderation === 'hidden' ? 'hidden-review' : ''}`} role="status">
+            {story.moderation === 'hidden'
+              ? 'Under review: this story was reported and is hidden from others until our team checks it.'
+              : 'Removed for going against our Community Guidelines. Only you can see this.'}
+          </div>
+        )}
         {held && <div className="hold-indicator" aria-hidden />}
         {toast && (
           <div className="toast" role="status">
@@ -507,6 +516,7 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
                   <button type="button" role="menuitem" onClick={notInterested}>Not interested</button>
                 )}
                 <button type="button" role="menuitem" onClick={muteAuthor}>Mute {group.author.username}</button>
+                <button type="button" role="menuitem" className="danger" onClick={() => setPanel('report')}>Report</button>
               </>
             )}
             <button type="button" role="menuitem" onClick={() => setPanel(null)}>Cancel</button>
@@ -517,6 +527,22 @@ export default function StoryViewer({ initialQueue, onClose, loadMore, onSeen, o
         <HighlightPicker storyIds={[story.id]} onClose={() => setPanel(null)} onSaved={(_h, msg) => showToast(msg)} />
       )}
       {panel === 'viewers' && <ViewersSheet storyId={story.id} onClose={() => setPanel(null)} />}
+      {panel === 'report' && (
+        <ReportSheet
+          targetType="story"
+          targetId={story.id}
+          username={group.author.username}
+          onDone={(res) => (skipAfterReportRef.current = !!res.blocked)}
+          onClose={() => {
+            setPanel(null);
+            // After blocking, move past this creator once the confirmation is dismissed.
+            if (skipAfterReportRef.current) {
+              skipAfterReportRef.current = false;
+              skipGroup();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

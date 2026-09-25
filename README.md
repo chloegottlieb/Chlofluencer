@@ -6,6 +6,14 @@ Storytime is a social app built around 24-hour stories. You tap through them lik
 
 <p align="center"><em>Tray of friends → tap through → "You're all caught up" → For You stories from new creators → Follow straight from the story.</em></p>
 
+It runs as a **web app** and as **iOS and Android apps** (via [Capacitor](https://capacitorjs.com)), backed by one Node.js server you can deploy to Fly.io or Render.
+
+| Guide | What it covers |
+| --- | --- |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Putting the backend online (Fly.io in about 10 minutes, Render, or any Docker host), secrets, backups |
+| [docs/MOBILE_RELEASE.md](docs/MOBILE_RELEASE.md) | Building in Xcode and Android Studio, TestFlight, App Store and Google Play listings, privacy labels, reviewer notes |
+| [docs/SAFETY.md](docs/SAFETY.md) | Reporting, blocking, content filter, moderation queue, and how they meet App Store / Google Play UGC rules |
+
 ---
 
 ## Features
@@ -21,18 +29,21 @@ Storytime is a social app built around 24-hour stories. You tap through them lik
 | **Highlights** | Save any of your stories, active or expired, to named highlights from the viewer or from your private **Archive**. Rename, reorder the cover, add, remove, and delete. Highlights stay on your profile permanently. |
 | **Profiles** | Profile picture upload, name, bio (150 characters), website, interests, follower and following lists, a ring around the avatar when there's an active story, a "Follows you" badge, and activity status. |
 | **Social** | Follow and unfollow, follow requests for private accounts, likes, story replies, direct messages, notifications, search, block, mute, and "Not interested". |
-| **Settings** | Privacy, For You and discovery, your stories, playback, notifications, appearance, blocked/muted/hidden lists, change password, log out of all devices, and delete account. [Full list below](#settings-reference). |
+| **Safety & moderation** | Terms acceptance at sign-up, an automated filter for slurs and abuse, **Report** on every story, account, reply and DM (anonymous, with an option to block too), stories auto-hidden after 3 reports, and a moderator queue to dismiss, remove or suspend. Reporters and authors are notified of outcomes. See [docs/SAFETY.md](docs/SAFETY.md). |
+| **Legal** | In-app Privacy Policy, Terms of Use (with App Store EULA terms), Community Guidelines and account-deletion instructions at `/privacy`, `/terms`, `/guidelines` and `/delete-account`. Company details come from one config file. |
+| **Native apps** | Capacitor iOS and Android projects with app icons, splash screens, portrait lock, the Android back button, and cheeky camera, mic and photo permission text. A friendly in-app "Say cheese!" screen appears before the system prompt. |
+| **Settings** | Privacy, For You and discovery, your stories, playback, notifications, appearance, blocked/muted/hidden lists, help & safety (your reports, support contact, moderation queue for moderators), change password, log out of all devices, and delete account. [Full list below](#settings-reference). |
 
 ---
 
 ## Requirements
 
-- **Node.js 20.10 or newer** (tested on Node 22). Check with `node -v`. Get it from <https://nodejs.org> or with a version manager such as `nvm install 22`.
+- **Node.js 22.13 or newer** (it uses Node's built-in SQLite). Check with `node -v`. Get it from <https://nodejs.org> or with a version manager such as `nvm install 22`.
 - **npm 10+**, which ships with Node.
 - **git**.
 - About 300 MB of disk for `node_modules`, plus about 150 MB for the Playwright browser if you run the end-to-end tests.
 
-There's no database server or other external service to set up. Data is stored in a JSON file under `./data`.
+There's no database server or other external service to set up. Data is stored in an SQLite file (`./data/storytime.sqlite`) plus a folder of uploads. For the native apps you'll also need Xcode and/or Android Studio; see [docs/MOBILE_RELEASE.md](docs/MOBILE_RELEASE.md).
 
 ---
 
@@ -66,7 +77,7 @@ This starts two processes:
 - **API server** at <http://localhost:4000>, which restarts when server files change.
 - **Web app** at <http://localhost:5173>, with hot reload. It proxies `/api` and `/uploads` to the API.
 
-On first start the API seeds a demo world: 11 creators plus your `demo` account, stories spread over the last 20 hours, a highlight, and some engagement.
+On first start the API seeds a demo world: 11 creators plus your `demo` account, stories spread over the last 20 hours, a highlight, some engagement, a DM thread, and one open report for the moderation queue. Demo data is local only. Production starts empty.
 
 ### 4. Open it
 
@@ -74,9 +85,10 @@ Open **<http://localhost:5173>** in your browser. It's designed mobile-first, so
 
 Log in with the demo account:
 
-| Username | Password |
-| --- | --- |
-| `demo` | `password123` |
+| Username | Password | What for |
+| --- | --- | --- |
+| `demo` | `password123` | A regular user with friends, DMs and a For You feed |
+| `mod` | `password123` | A moderator: **Settings → Help & safety → Moderation queue** |
 
 Every seeded account (`maya.travels`, `leo.lifts`, `priya.cooks`, `zoe.wanders`, `sofia.style`, `sam.private`, …) also uses `password123`. You can also **sign up** for a new account.
 
@@ -85,6 +97,7 @@ Every seeded account (`maya.travels`, `leo.lifts`, `priya.cooks`, `zoe.wanders`,
 2. Tap ✈ in the top-right corner. `maya.travels` (you follow each other) has sent you a DM.
 3. Open **Activity → Story replies** to see a one-way reply from `zoe.wanders`. You don't follow each other, so you can't reply back.
 4. Tap **＋ → Photo / Video → Open camera** to take a photo or video in the app.
+5. Open any story's **⋯ → Report** to see the reporting flow, then log in as `mod` to act on it.
 
 ### Production-style run (single server)
 
@@ -108,7 +121,7 @@ Without HTTPS, the camera screen explains why it can't start and offers **Choose
 ### Reset the demo data
 
 ```bash
-npm run seed    # wipes ./data/db.json and re-seeds the demo world
+npm run seed    # wipes ./data/storytime.sqlite and re-seeds the demo world
 ```
 
 To start completely fresh, delete the `data/` folder. It's recreated (and re-seeded) on the next start.
@@ -118,13 +131,29 @@ To start completely fresh, delete the `data/` folder. It's recreated (and re-see
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `4000` | API/server port |
-| `DATA_DIR` | `./data` | Where `db.json` and uploaded media are stored |
+| `DATA_DIR` | `./data` | Where `storytime.sqlite` and uploaded media are stored |
 | `JWT_SECRET` | `dev-only-secret-change-me` | Secret used to sign login tokens. **Set this to a long random value anywhere real.** |
 | `SEED` | *(on)* | Set to `false` to start with an empty database instead of the demo world |
 | `API_PORT` | `4000` | Where the Vite dev server proxies API calls (only needed if you change `PORT` in dev) |
+| `SUPPORT_EMAIL`, `MODERATOR_USERNAMES`, `CORS_ORIGINS`, `NODE_ENV`, … | | Production settings. See the [full list in DEPLOYMENT.md](docs/DEPLOYMENT.md#environment-variables). |
 
 Example: `PORT=5000 JWT_SECRET=$(openssl rand -hex 32) npm start`.
 On Windows PowerShell: `$env:PORT=5000; npm start`.
+
+### Deploy the backend and publish the apps
+
+1. **Backend:** `fly launch` → `fly volumes create` → `fly secrets set JWT_SECRET=…` → `fly deploy`. Step by step in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+2. **Fill in your company details** in `client/src/legal/config.js` (used by the privacy policy and terms).
+3. **Point the apps at your backend** in `.env.mobile` (`VITE_API_URL=https://…`), then `npm run build:mobile`.
+4. **iOS:** `npm run ios` opens Xcode. Pick your team, run on your phone, then Archive → Upload.
+   **Android:** `npm run android` opens Android Studio. Build a signed App Bundle and upload it to Play Console.
+   Full checklist, store listing answers and reviewer notes are in [docs/MOBILE_RELEASE.md](docs/MOBILE_RELEASE.md).
+
+| Script | What it does |
+| --- | --- |
+| `npm run build:mobile` | Checks `.env.mobile`, builds the web app for mobile, and copies it into `ios/` and `android/` |
+| `npm run ios` / `npm run android` | `build:mobile`, then opens Xcode or Android Studio |
+| `npm run backup` | Consistent snapshot of the SQLite database into `data/backups/` |
 
 ---
 
@@ -136,7 +165,7 @@ The test suite has four layers:
 | --- | --- | --- | --- |
 | Unit: feed algorithm, validation, settings, storage, player logic, formatting | Vitest | `tests/unit/` | `npm test` |
 | API integration: every endpoint against an in-memory DB with a controllable clock (so 24-hour expiry is tested) | Vitest + Supertest | `tests/api/` | `npm test` |
-| Component: story viewer, camera, messages, home, auth, settings, create, profile, activity | Vitest + Testing Library + jsdom | `tests/client/` | `npm test` |
+| Component: story viewer, camera (incl. hands-free & permission primer), messages, reporting, home, auth, settings, create, profile, activity | Vitest + Testing Library + jsdom | `tests/client/` | `npm test` |
 | End-to-end: the BDD scenarios below, in a real Chromium on a Pixel-7 viewport (with a simulated camera and microphone) against a freshly seeded server | Playwright | `e2e/` | `npm run test:e2e` |
 
 ```bash
@@ -155,7 +184,7 @@ npm run test:all         # everything
 
 > On Linux CI machines, use `npx playwright install --with-deps chromium` to also install the system libraries Chromium needs.
 
-The current suite has **331** unit, API and component tests plus **37** end-to-end scenarios.
+The current suite has **380** unit, API and component tests plus **44** end-to-end scenarios.
 
 ---
 
@@ -465,6 +494,59 @@ Feature: Privacy and settings
     Then I can log in with the new password and not the old one
 ```
 
+#### `e2e/features/safety.feature` → automated in `e2e/safety.spec.js`
+
+```gherkin
+Feature: Safety, moderation and legal
+  Storytime has no tolerance for objectionable content or abusive users.
+  People can report and block, abusive language is filtered, and moderators
+  act on reports (App Store Review Guideline 1.2).
+
+  Scenario: Terms must be accepted to sign up
+    Given I am on the sign up page
+    Then the "Sign up" button is disabled
+    And I can open the Terms of Use, Community Guidelines and Privacy Policy
+    When I tick "I agree to the Terms of Use and Community Guidelines"
+    Then I can create my account
+
+  Scenario: Legal pages are public
+    Given I am not logged in
+    When I open /privacy, /terms, /guidelines and /delete-account
+    Then I can read each page without an account
+
+  Scenario: Report a story and block the creator
+    Given I am watching a For You story
+    When I choose "Report" from the ⋯ menu
+    And I pick "Spam or scam", turn on "Also block", and submit
+    Then I see "Thanks for letting us know"
+    And the creator's profile shows as blocked for me
+    And Settings → Your reports lists my report as "In review"
+
+  Scenario: Abusive language is blocked before it's posted
+    Given I am writing a text story
+    When my story contains a slur
+    Then I see "That contains language that isn't allowed on Storytime"
+    And nothing is posted
+
+  Scenario: Heavily reported stories are hidden until reviewed
+    Given 3 different people report the same story
+    Then nobody but the author can see it
+    And the author sees "Under review" on their story
+
+  Scenario: A moderator removes a story and suspends the account
+    Given a story has been reported
+    When a moderator opens Settings → Moderation queue
+    And chooses "Remove + suspend" on the reported story
+    Then the story is gone for everyone
+    And the creator can no longer log in and sees a suspension message with the support email
+    And the reporter gets a "Storytime Safety" notice that action was taken
+
+  Scenario: Report a direct message
+    Given "alex" and "blair" follow each other and alex sent blair a message
+    When blair taps "Report" under the message and submits a reason
+    Then the message report reaches the moderation queue
+```
+
 #### Extra scenarios for manual QA (covered by API or component tests)
 
 ```gherkin
@@ -501,6 +583,20 @@ Feature: In-app camera on real devices (manual)
   Scenario: Selfie video on iPhone Safari and Android Chrome
     When I flip to the front camera and hold the shutter for 5 seconds
     Then the story plays my 5-second video with sound
+
+Feature: Native apps (manual, on real devices)
+  Scenario: iOS permission prompts
+    Given a fresh install of the iOS app
+    When I open the in-app camera and tap "Let's go"
+    Then iOS asks for camera access with "…We promise not to judge your angles. 📸"
+    And then microphone access with "…Just maybe don't chew. 🎙️"
+
+  Scenario: Android back button
+    When I open a profile from the story viewer and press the back button
+    Then I return to the previous screen, and pressing back on Home exits the app
+
+  Scenario: Notch and home indicator
+    Then no buttons sit under the notch, the status bar, or the home indicator
 
 Feature: For You learns from behaviour
   Scenario: Likes teach the algorithm
@@ -588,20 +684,31 @@ Friends are simpler: people you follow who have active stories, those with unsee
 │       ├── lib/time.js       relative time and count formatting
 │       ├── lib/camera.js     camera helpers (recorder format, 9:16 crop, errors)
 │       ├── components/       StoryViewer, CameraCapture, HighlightPicker, ViewersSheet, MessagesLink, …
-│       └── pages/            Home, Create, Messages, Conversation, Profile, EditProfile, Settings, Archive, Activity, Search, Login, Signup
+│       ├── legal/            Privacy, Terms, Guidelines, Account deletion + config.js (your company details)
+│       └── pages/            Home, Create, Messages, Conversation, Profile, EditProfile, Settings, Archive, Activity, Search, Moderation, Legal, Login, Signup
+├── ios/, android/            Capacitor native projects (icons, splash, permissions configured)
+├── assets/                   Source icon & splash images (regenerate with @capacitor/assets)
+├── docs/                     DEPLOYMENT.md, MOBILE_RELEASE.md, SAFETY.md
+├── capacitor.config.json     App id/name for the native shells
+├── Dockerfile, fly.toml, render.yaml   Hosting
 ├── server/                   Express 5 API
 │   ├── index.js              entry point (auto-seeds an empty DB)
 │   ├── app.js                createApp({ db, now, uploadDir, … }) with injectable dependencies for tests
-│   ├── db.js                 small JSON-file document store
+│   ├── config.js             environment configuration + production checks
+│   ├── security.js           CORS, security headers, rate limits
+│   ├── db.js                 document store persisted to SQLite (row per document)
+│   ├── backup.js             `npm run backup`
 │   ├── auth.js               bcrypt, JWT, auth middleware
 │   ├── uploads.js            multer config (images and videos, 50 MB)
 │   ├── seed.js               demo world, with SVG images generated offline
 │   ├── lib/feed.js           ★ the friends + For You ranking algorithm
 │   ├── lib/social.js         follow, block and visibility rules; notifications
 │   ├── lib/messaging.js      who can DM whom (mutual follows only)
+│   ├── lib/moderation.js     report reasons, auto-hide threshold, terms version
+│   ├── lib/contentFilter.js  objectionable-language filter (+ lib/blocklist.js)
 │   ├── lib/settings.js       settings schema, defaults and validation
 │   ├── lib/validation.js     input validation
-│   └── routes/               auth, users, stories, feed, highlights, messages, settings, notifications
+│   └── routes/               auth, users, stories, feed, highlights, messages, moderation, settings, notifications
 ├── tests/
 │   ├── unit/                 pure-logic tests
 │   ├── api/                  Supertest integration tests
@@ -640,6 +747,10 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 | `POST /highlights` · `PATCH /highlights/:id` · `DELETE /highlights/:id` | `{ title, storyIds }` · `{ title?, addStoryIds?, removeStoryIds?, coverStoryId? }` |
 | `GET/PATCH /settings` · `POST /settings/password` · `POST /settings/reset-recommendations` | Settings |
 | `GET /notifications` · `POST /notifications/read` | Activity |
+| `POST /auth/accept-terms` · `GET /config` | Accept the current Terms · public config (support email) |
+| `GET /reports/reasons` · `POST /reports` · `GET /reports/mine` | Report reasons · report `{ targetType: story\|user\|message\|reply, targetId, reason, details?, block? }` · your reports and their status |
+| `GET /moderation/queue?status=open\|resolved` · `POST /moderation/resolve` | Moderators: grouped reports · `{ targetType, targetId, action: dismiss\|remove\|suspend\|remove_and_suspend, note? }` |
+| `POST /moderation/users/:username/{suspend,unsuspend}` · `GET /moderation/suspended` | Moderators: manage suspensions |
 | `GET /messages` · `GET /messages/unread` · `GET /messages/contacts` | Inbox (conversations with unread counts) · unread total · people you can message (mutual follows) |
 | `GET /messages/:username` · `POST /messages/:username` | Open a thread (marks it read, includes `canMessage` and `reason`) · send `{ text }`. Returns 403 `reason: not_mutual` unless you follow each other. |
 
@@ -652,13 +763,14 @@ All endpoints are under `/api` and take and return JSON. Everything except `sign
 - **Playwright can't find a browser**: run `npx playwright install chromium`.
 - **Weird data**: run `npm run seed`, or delete `./data`.
 - **Camera won't start**: you need `https://` or `localhost` (use `npm run dev:phone` on a phone), camera permission for the site, and no other app using the camera.
-- **Don't see the demo DMs?** Your `./data` was created before messaging existed. Run `npm run seed` to rebuild the demo world.
+- **Don't see the demo DMs or the `mod` account?** Your `./data` was created by an older version. Run `npm run seed` to rebuild the demo world. (Existing data in an old `db.json` is migrated to SQLite automatically.)
+- **`node:sqlite` not found / "SQLite is an experimental feature"**: upgrade to Node 22.13+. The warning is harmless and hidden by the server.
 - **Videos don't autoplay with sound**: browsers block autoplay with sound until you interact with the page. Tap the 🔇 button.
 
 ## MVP limitations and next steps
 
-- Storage is a single JSON file. That's fine for demos and small groups. Swap `server/db.js` for Postgres or SQLite before real traffic, since the rest of the server only uses its small `find/filter/insert/update/remove` interface.
-- Media is stored on local disk with no transcoding. A real deployment would use object storage (S3 or similar) and a CDN.
+- Storage is SQLite on one server with media on the same disk. That's fine for a launch, but plan a move to Postgres and object storage (S3/R2 + CDN) as you grow. See [Scaling later](docs/DEPLOYMENT.md#scaling-later). Uploaded video isn't transcoded.
+- There are no push notifications yet (`@capacitor/push-notifications` + APNs/FCM would be the next step). Moderation has no automated image or video scanning yet (see [docs/SAFETY.md](docs/SAFETY.md)).
 - There are no real-time updates over WebSockets. Open conversations check for new messages every 4 seconds, the unread badge every 15 seconds, and the feed refreshes when you close the viewer or navigate.
 - The camera has no filters, zoom, flash or text/sticker editing yet, and hands-free doesn't respond to voice commands. Recorded videos are uploaded as the browser recorded them (MP4 on Safari and recent Chrome, WebM on older Chrome and Firefox). Older iPhones may not play WebM stories.
 - DMs are text-only. Photos and voice notes in DMs, message requests, reporting and content moderation, close-friends lists, stickers and music (Spotify) are natural next features.

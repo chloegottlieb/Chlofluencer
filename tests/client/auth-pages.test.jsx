@@ -61,10 +61,12 @@ describe('Signup page', () => {
     fireEvent.click(screen.getByRole('button', { name: '#music' }));
     fireEvent.click(screen.getByRole('button', { name: '#music' }));
     expect(screen.getByRole('button', { name: '#travel' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', { name: /agree to the Terms/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
     await waitFor(() => expect(calls(fetchMock, 'POST', /auth\/signup/)).toHaveLength(1));
     const body = JSON.parse(calls(fetchMock, 'POST', /auth\/signup/)[0][1].body);
-    expect(body).toMatchObject({ username: 'newbie', email: 'n@example.com', interests: ['travel'] });
+    expect(body).toMatchObject({ username: 'newbie', email: 'n@example.com', interests: ['travel'], acceptTerms: true });
   });
 
   it('shows validation errors from the server', async () => {
@@ -73,6 +75,7 @@ describe('Signup page', () => {
     fireEvent.change(await screen.findByLabelText('Username'), { target: { value: 'demo' } });
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'n@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password1' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: /agree to the Terms/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('That username is taken');
   });

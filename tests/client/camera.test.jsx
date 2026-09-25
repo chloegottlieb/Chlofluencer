@@ -31,6 +31,8 @@ class FakeRecorder {
 }
 
 beforeEach(() => {
+  // Camera already allowed on this device (the primer has its own tests below).
+  localStorage.setItem('storytime_camera_ok', '1');
   getUserMedia = vi.fn(async () => fakeStream());
   Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true });
   vi.stubGlobal('MediaRecorder', FakeRecorder);
@@ -237,5 +239,33 @@ describe('CameraCapture hands-free mode', () => {
     await readyHandsFree();
     expect(screen.getByRole('radio', { name: '10s' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('radio', { name: '60s' })).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('CameraCapture permission primer', () => {
+  it('explains, cheekily, before asking for the camera the first time', async () => {
+    localStorage.removeItem('storytime_camera_ok');
+    const { onUseLibrary } = renderCamera();
+    expect(await screen.findByText('Say cheese! 🧀')).toBeInTheDocument();
+    expect(screen.getByText(/not to judge your angles/)).toBeInTheDocument();
+    expect(getUserMedia).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Use my camera roll instead' }));
+    expect(onUseLibrary).toHaveBeenCalled();
+  });
+
+  it('asks the OS only after "Let\'s go", then remembers', async () => {
+    localStorage.removeItem('storytime_camera_ok');
+    renderCamera();
+    fireEvent.click(await screen.findByRole('button', { name: "Let's go" }));
+    await waitFor(() => expect(status()).toBe('ready'));
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem('storytime_camera_ok')).toBe('1');
+  });
+
+  it('"Maybe later" closes the camera', async () => {
+    localStorage.removeItem('storytime_camera_ok');
+    const { onClose } = renderCamera();
+    fireEvent.click(await screen.findByRole('button', { name: 'Maybe later' }));
+    expect(onClose).toHaveBeenCalled();
   });
 });

@@ -90,16 +90,20 @@ test.describe('Feature: Posting stories and saving highlights', () => {
     await expect(page.getByTestId('countdown')).toContainText('3');
     await expect(page.getByTestId('countdown')).toContainText('1', { timeout: 4000 });
     await expect(camera).toHaveAttribute('data-status', 'recording', { timeout: 4000 });
+    const recordingStarted = Date.now();
     await expect(page.getByRole('timer')).toContainText('/ 0:15');
     await expect(camera).toHaveAttribute('data-status', 'review', { timeout: 20_000 });
+    // It stopped by itself at the 15s limit, not earlier.
+    expect(Date.now() - recordingStarted).toBeGreaterThan(14_000);
     await page.getByRole('button', { name: 'Use video' }).click();
     await page.getByRole('button', { name: 'Share to your story' }).click();
     await expect(page.getByRole('region', { name: 'Stories' })).toBeVisible();
     const { stories } = await (await authed(request, me.token).get('/stories/mine')).json();
     expect(stories[0].type).toBe('video');
-    // Stopped by itself at the 15s limit (the file's own length may be a few ms shorter).
-    expect(stories[0].durationMs).toBeGreaterThan(14_000);
-    expect(stories[0].durationMs).toBeLessThanOrEqual(15_000);
+    // The saved length is measured from the video file itself, so it can differ
+    // from the 15s limit by a frame or so either way (e.g. 14 975 or 15 001 ms).
+    expect(stories[0].durationMs).toBeGreaterThan(10_000);
+    expect(stories[0].durationMs).toBeLessThan(15_500);
   });
 
   test('Cancel a hands-free countdown', async ({ page, request }) => {

@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import Avatar from '../components/Avatar.jsx';
 import Modal from '../components/Modal.jsx';
+import ReportSheet from '../components/ReportSheet.jsx';
 import StoryViewer from '../components/StoryViewer.jsx';
 import { formatCount, timeAgo } from '../lib/time.js';
+import { mediaUrl } from '../lib/media.js';
 
 export default function Profile() {
   const { username } = useParams();
@@ -14,6 +16,7 @@ export default function Profile() {
   const [queue, setQueue] = useState(null);
   const [list, setList] = useState(null); // { title, users }
   const [menuOpen, setMenuOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -150,7 +153,7 @@ export default function Profile() {
           {highlights.map((h) => (
             <button type="button" key={h.id} className="highlight-item" onClick={() => watchHighlight(h.id)} data-testid="highlight">
               <span className="highlight-cover" style={{ background: h.cover?.background }}>
-                {h.cover?.mediaUrl ? <img src={h.cover.mediaUrl} alt="" /> : <span className="cover-text">{h.cover?.text?.slice(0, 12)}</span>}
+                {h.cover?.mediaUrl ? <img src={mediaUrl(h.cover.mediaUrl)} alt="" /> : <span className="cover-text">{h.cover?.text?.slice(0, 12)}</span>}
               </span>
               <span className="highlight-title">{h.title}</span>
             </button>
@@ -176,9 +179,16 @@ export default function Profile() {
             <button type="button" role="menuitem" className="danger" onClick={() => action('block', relationship.blocked ? 'DELETE' : 'POST')}>
               {relationship.blocked ? 'Unblock' : 'Block'}
             </button>
+            <button type="button" role="menuitem" className="danger" onClick={() => { setMenuOpen(false); setReporting(true); }}>
+              Report account
+            </button>
             <button type="button" role="menuitem" onClick={() => setMenuOpen(false)}>Cancel</button>
           </div>
         </div>
+      )}
+
+      {reporting && (
+        <ReportSheet targetType="user" targetId={user.id} username={user.username} onClose={() => setReporting(false)} onDone={() => load()} />
       )}
 
       {list && (

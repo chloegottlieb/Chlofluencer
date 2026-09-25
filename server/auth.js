@@ -22,7 +22,7 @@ export class HttpError extends Error {
 }
 
 /** Express middleware that attaches req.user or responds 401. */
-export function requireAuth({ db, secret }) {
+export function requireAuth({ db, secret, moderators = [] }) {
   return (req, _res, next) => {
     const header = req.get('authorization') ?? '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
@@ -30,11 +30,12 @@ export function requireAuth({ db, secret }) {
     try {
       const payload = jwt.verify(token, secret);
       const user = db.find('users', (u) => u.id === payload.sub);
-      if (!user || (user.tokenVersion ?? 0) !== payload.tv) throw new Error('stale');
+      if (!user || (user.tokenVersion ?? 0) !== payload.tv || user.suspended) throw new Error('stale');
       if (!user.lastActiveAt || Date.now() - user.lastActiveAt > 60_000) {
         db.update('users', (u) => u.id === user.id, { lastActiveAt: Date.now() });
       }
       req.user = user;
+      req.isModerator = user.role === 'moderator' || moderators.includes(user.username);
       next();
     } catch {
       next(new HttpError(401, 'Session expired, please log in again'));

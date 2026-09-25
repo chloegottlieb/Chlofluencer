@@ -1,0 +1,11 @@
+node_modules
+dist
+data
+.e2e-data
+coverage
+test-results
+playwright-report
+ios
+android
+.git
+*.log

@@ -4,6 +4,7 @@ import { hashPassword } from './auth.js';
 import { defaultSettings } from './lib/settings.js';
 import { newId } from './lib/social.js';
 import { STORY_TTL_MS } from './lib/feed.js';
+import { TERMS_VERSION } from './lib/moderation.js';
 
 export const DEMO_PASSWORD = 'password123';
 const HOUR = 60 * 60 * 1000;
@@ -107,6 +108,7 @@ const PEOPLE = [
     username: 'ana.paints', name: 'Ana Souza', bio: 'Watercolor & ink 🎨 commissions open', interests: ['art', 'painting'],
     stories: [[15, 'image', { emoji: '🎨', title: 'Work in progress', subtitle: 'Day 3 of 5' }, ['art', 'painting']]],
   },
+  { username: 'mod', name: 'Storytime Safety', bio: 'Keeping Storytime kind. Reports reviewed within 24h.', interests: [], role: 'moderator', stories: [] },
   {
     username: 'sam.private', name: 'Sam Private', bio: 'Close friends only 🔒', interests: ['travel'], private: true,
     stories: [[2, 'text', 'This is a private story', ['travel']]],
@@ -141,6 +143,10 @@ export function seedDemoData(db, { now = Date.now(), uploadDir }) {
       avatarUrl: p.username === 'demo' ? null : writeSvg(`seed-avatar-${p.username}.svg`, avatarSvg({ initials, colors })),
       interests: p.interests,
       verified: !!p.verified,
+      role: p.role ?? 'user',
+      suspended: null,
+      termsVersion: TERMS_VERSION,
+      termsAcceptedAt: now - 30 * 24 * HOUR,
       tokenVersion: 0,
       createdAt: now - (idx < 6 ? 400 : 5) * 24 * HOUR,
     });
@@ -264,6 +270,24 @@ export function seedDemoData(db, { now = Date.now(), uploadDir }) {
     toId: users.demo.id,
     text: 'Welcome to Storytime! ✨',
     createdAt: demoOld + HOUR,
+  });
+
+  // One open report so the moderation queue has something in it.
+  const reported = db.find('stories', (s) => s.authorId === users['omar.laughs'].id);
+  db.insert('reports', {
+    id: newId(),
+    reporterId: users['ana.paints'].id,
+    targetType: 'story',
+    targetId: reported.id,
+    targetUserId: users['omar.laughs'].id,
+    reason: 'spam',
+    details: 'Posts the same joke every day',
+    snapshot: { type: reported.type, text: reported.text, caption: reported.caption, mediaUrl: null, background: reported.background, tags: reported.tags },
+    status: 'open',
+    createdAt: now - 2 * HOUR,
+    resolvedAt: null,
+    resolvedBy: null,
+    action: null,
   });
 
   return users;

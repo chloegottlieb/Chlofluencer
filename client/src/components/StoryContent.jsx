@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import { mediaUrl } from '../lib/media.js';
 
 /** Renders a single story's media (photo, video or text-on-gradient). */
 const StoryContent = forwardRef(function StoryContent({ story, muted, dataSaver, onVideoMeta }, videoRef) {
@@ -8,7 +9,7 @@ const StoryContent = forwardRef(function StoryContent({ story, muted, dataSaver,
       <video
         ref={videoRef}
         className="story-media"
-        src={story.mediaUrl}
+        src={mediaUrl(story.mediaUrl)}
         muted={muted}
         playsInline
         autoPlay
@@ -21,7 +22,7 @@ const StoryContent = forwardRef(function StoryContent({ story, muted, dataSaver,
   if (story.type === 'image') {
     return (
       <div className="story-media-wrap" style={{ background: story.background }}>
-        <img className="story-media" src={story.mediaUrl} alt={story.caption || 'Story'} draggable="false" />
+        <img className="story-media" src={mediaUrl(story.mediaUrl)} alt={story.caption || 'Story'} draggable="false" />
         {story.caption && <p className="story-caption">{story.caption}</p>}
       </div>
     );

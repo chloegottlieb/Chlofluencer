@@ -95,6 +95,29 @@ function AccountList({ title, path, action, actionLabel }) {
   );
 }
 
+const REPORT_STATUS = { open: 'In review', actioned: 'Action taken', dismissed: 'No violation found' };
+
+function MyReports() {
+  const [reports, setReports] = useState(null);
+  useEffect(() => {
+    api('/reports/mine').then((d) => setReports(d.reports)).catch(() => setReports([]));
+  }, []);
+  return (
+    <details className="settings-details">
+      <summary>Your reports {reports && <span className="muted">({reports.length})</span>}</summary>
+      {reports?.length === 0 && <p className="muted small-text">You haven't reported anything.</p>}
+      <ul className="list">
+        {reports?.map((r) => (
+          <li key={r.id} className="list-row small-text">
+            <span className="grow">{r.targetType} · {r.reason.replace('_', ' ')}</span>
+            <span className="muted">{REPORT_STATUS[r.status]}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export default function Settings() {
   const { user, setUser, logout, setToken } = useAuth();
   const navigate = useNavigate();
@@ -103,6 +126,11 @@ export default function Settings() {
   const [error, setError] = useState('');
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
   const [deletePw, setDeletePw] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+
+  useEffect(() => {
+    api('/config').then((d) => setSupportEmail(d.supportEmail)).catch(() => {});
+  }, []);
 
   const flash = (msg) => {
     setStatus(msg);
@@ -220,6 +248,20 @@ export default function Settings() {
           )}
         </section>
       ))}
+
+      <section className="settings-section" aria-label="Help & safety">
+        <h2>Help & safety</h2>
+        {user.isModerator && <Link className="setting-link" to="/moderation">🛡 Moderation queue</Link>}
+        <Link className="setting-link" to="/guidelines">Community Guidelines</Link>
+        <Link className="setting-link" to="/terms">Terms of Use</Link>
+        <Link className="setting-link" to="/privacy">Privacy Policy</Link>
+        <MyReports />
+        <p className="muted small-text">
+          Need help or want to appeal a decision? Email{' '}
+          {supportEmail ? <a href={`mailto:${supportEmail}`}>{supportEmail}</a> : 'our support team'}. To report a story, account
+          or message, use the ⋯ menu on it.
+        </p>
+      </section>
 
       <section className="settings-section">
         <h2>Blocked & hidden accounts</h2>

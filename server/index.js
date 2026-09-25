@@ -1,19 +1,46 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createApp } from './app.js';
-import { createDb } from './db.js';
+import { loadConfig } from './config.js';
+import { createDb, migrateJsonToSqlite } from './db.js';
 import { seedDemoData, DEMO_PASSWORD } from './seed.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dataDir = path.resolve(process.env.DATA_DIR ?? path.join(root, 'data'));
-const uploadDir = path.join(dataDir, 'uploads');
-const port = Number(process.env.PORT ?? 4000);
+const config = loadConfig(process.env, { root });
 
-const db = createDb({ file: path.join(dataDir, 'db.json') });
-if (db.isEmpty() && process.env.SEED !== 'false') {
-  seedDemoData(db, { uploadDir });
-  console.log(`Seeded demo data. Log in as "demo" / "${DEMO_PASSWORD}"`);
+const db = createDb({ file: config.dbFile });
+if (migrateJsonToSqlite(config.legacyJsonFile, db)) {
+  console.log(`Migrated ${config.legacyJsonFile} to ${config.dbFile}`);
+}
+if (db.isEmpty() && config.seed) {
+  seedDemoData(db, { uploadDir: config.uploadDir });
+  console.log(`Seeded demo data. Log in as "demo" / "${DEMO_PASSWORD}" (moderator: "mod")`);
 }
 
-const app = createApp({ db, uploadDir, clientDir: path.join(root, 'dist') });
-app.listen(port, () => console.log(`Storytime API listening on http://localhost:${port}`));
+const app = createApp({
+  db,
+  secret: config.jwtSecret,
+  uploadDir: config.uploadDir,
+  clientDir: config.clientDir,
+  corsOrigins: config.corsOrigins,
+  rateLimits: config.rateLimits,
+  trustProxy: config.trustProxy,
+  isProd: config.isProd,
+  moderators: config.moderators,
+  supportEmail: config.supportEmail,
+});
+
+const server = app.listen(config.port, () =>
+  console.log(`Storytime ${config.isProd ? '(production) ' : ''}listening on http://localhost:${config.port}`),
+);
+
+// Finish in-flight requests and close the database cleanly on deploys/restarts.
+for (const signal of ['SIGTERM', 'SIGINT']) {
+  process.on(signal, () => {
+    server.close(() => {
+      db.close();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(0), 10_000).unref();
+  });
+}

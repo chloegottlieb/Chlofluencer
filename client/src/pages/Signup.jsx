@@ -11,6 +11,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const [form, setForm] = useState({ username: '', displayName: '', email: '', password: '' });
   const [interests, setInterests] = useState([]);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +24,7 @@ export default function Signup() {
     setBusy(true);
     setError('');
     try {
-      await signup({ ...form, interests });
+      await signup({ ...form, interests, acceptTerms });
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -68,7 +69,14 @@ export default function Signup() {
             ))}
           </div>
         </fieldset>
-        <button className="btn primary block" type="submit" disabled={busy}>
+        <label className="terms-check">
+          <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} aria-label="I agree to the Terms of Use and Community Guidelines" />
+          <span>
+            I'm at least 13 and agree to the <Link to="/terms">Terms of Use</Link> and{' '}
+            <Link to="/guidelines">Community Guidelines</Link>. I've read the <Link to="/privacy">Privacy Policy</Link>.
+          </span>
+        </label>
+        <button className="btn primary block" type="submit" disabled={busy || !acceptTerms}>
           {busy ? 'Creating account…' : 'Sign up'}
         </button>
         <p className="center">

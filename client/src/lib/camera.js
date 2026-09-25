@@ -85,3 +85,37 @@ export function saveHandsFreePrefs(prefs, storage = globalThis.localStorage) {
     /* storage unavailable (private mode etc.) — preference just isn't remembered */
   }
 }
+
+// --- Permission primer ---------------------------------------------------------
+// A friendly explainer shown before the OS permission prompt, only until the
+// camera has worked once on this device.
+const PRIMED_KEY = 'storytime_camera_ok';
+
+export function rememberCameraGranted(storage = globalThis.localStorage) {
+  try {
+    storage?.setItem(PRIMED_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Resolve to true if we should show the primer before asking for the camera. */
+export async function shouldShowCameraPrimer({ storage = globalThis.localStorage, nav = globalThis.navigator } = {}) {
+  try {
+    if (storage?.getItem(PRIMED_KEY)) return false;
+  } catch {
+    /* ignore */
+  }
+  if (!cameraSupported(nav)) return false; // straight to the "not supported" explanation
+  try {
+    const status = await nav.permissions?.query({ name: 'camera' });
+    if (status?.state === 'granted') {
+      rememberCameraGranted(storage);
+      return false;
+    }
+    if (status?.state === 'denied') return false; // show the "blocked" help instead
+  } catch {
+    /* Permissions API can't answer for camera (e.g. iOS WebView): ask nicely first. */
+  }
+  return true;
+}

@@ -1,3 +1,5 @@
+import { mediaUrl } from '../lib/media.js';
+
 export default function Avatar({ user, size = 40, ring = null, onClick, className = '' }) {
   const initials = (user?.displayName || user?.username || '?')
     .split(/\s+/)
@@ -6,7 +8,7 @@ export default function Avatar({ user, size = 40, ring = null, onClick, classNam
     .slice(0, 2)
     .toUpperCase();
   const inner = user?.avatarUrl ? (
-    <img src={user.avatarUrl} alt={`${user.username}'s profile picture`} className="avatar-img" draggable="false" />
+    <img src={mediaUrl(user.avatarUrl)} alt={`${user.username}'s profile picture`} className="avatar-img" draggable="false" />
   ) : (
     <span className="avatar-fallback" aria-label={`${user?.username ?? 'user'}'s profile picture`}>
       {initials}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import HighlightPicker from '../components/HighlightPicker.jsx';
 import { formatDate, timeLeft } from '../lib/time.js';
+import { mediaUrl } from '../lib/media.js';
 
 /** Every story you've posted (active and expired), selectable into highlights. */
 export default function Archive() {
@@ -51,11 +52,12 @@ export default function Archive() {
               onClick={() => toggle(s.id)}
               data-testid="archive-tile"
             >
-              {s.type === 'image' && <img src={s.mediaUrl} alt="" />}
-              {s.type === 'video' && <video src={s.mediaUrl} muted preload="metadata" />}
+              {s.type === 'image' && <img src={mediaUrl(s.mediaUrl)} alt="" />}
+              {s.type === 'video' && <video src={mediaUrl(s.mediaUrl)} muted preload="metadata" />}
               {s.type === 'text' && <span className="tile-text">{s.text}</span>}
               <span className="tile-date">{s.expired ? formatDate(s.createdAt) : timeLeft(s.expiresAt)}</span>
               {selected.includes(s.id) && <span className="tile-check">✓</span>}
+              {s.moderation && <span className="tile-flag">{s.moderation === 'hidden' ? 'Under review' : 'Removed'}</span>}
             </button>
           ))}
         </div>

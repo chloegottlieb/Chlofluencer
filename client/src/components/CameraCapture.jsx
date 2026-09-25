@@ -12,7 +12,9 @@ import {
   formatRecordingTime,
   loadHandsFreePrefs,
   pickRecorderMimeType,
+  rememberCameraGranted,
   saveHandsFreePrefs,
+  shouldShowCameraPrimer,
 } from '../lib/camera.js';
 
 const MODES = [
@@ -48,6 +50,7 @@ export default function CameraCapture({ onCapture, onClose, onUseLibrary }) {
   const [shot, setShot] = useState(null); // { file, url, kind, durationMs }
   const [handsFree, setHandsFree] = useState(loadHandsFreePrefs);
   const [countdown, setCountdown] = useState(0);
+  const [primed, setPrimed] = useState(null); // null = checking, false = show primer, true = go
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -78,6 +81,7 @@ export default function CameraCapture({ onCapture, onClose, onUseLibrary }) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play?.()?.catch?.(() => {});
       }
+      rememberCameraGranted();
       setError('');
       setStatus('ready');
     } catch (err) {
@@ -87,9 +91,17 @@ export default function CameraCapture({ onCapture, onClose, onUseLibrary }) {
   }, [facing, stopStream]);
 
   useEffect(() => {
-    if (!shot) startStream();
+    let alive = true;
+    shouldShowCameraPrimer().then((show) => alive && setPrimed(!show));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (primed && !shot) startStream();
     return stopStream;
-  }, [startStream, stopStream, shot]);
+  }, [primed, startStream, stopStream, shot]);
 
   useEffect(() => () => shot?.url && URL.revokeObjectURL(shot.url), [shot]);
 
@@ -257,8 +269,30 @@ export default function CameraCapture({ onCapture, onClose, onUseLibrary }) {
         ? 'Stop recording'
         : { photo: 'Take photo', video: 'Start recording', handsfree: 'Start hands-free recording' }[mode];
 
+  if (primed === false) {
+    return (
+      <div className="camera" role="dialog" aria-label="Camera" data-testid="camera" data-status="primer">
+        <div className="camera-top">
+          <button type="button" className="icon-btn" aria-label="Close camera" onClick={onClose}>✕</button>
+        </div>
+        <div className="camera-primer">
+          <div className="primer-emoji" aria-hidden>📸</div>
+          <h2>Say cheese! 🧀</h2>
+          <p>
+            Storytime needs your <strong>camera</strong> to snap stories and your <strong>mic</strong> so your videos
+            aren't silent films. We promise not to judge your angles.
+          </p>
+          <p className="muted small-text">We only use them while this screen is open. Pinky promise. 🤙</p>
+          <button type="button" className="btn primary block" onClick={() => setPrimed(true)}>Let's go</button>
+          <button type="button" className="btn ghost block" onClick={onUseLibrary}>Use my camera roll instead</button>
+          <button type="button" className="link-btn" onClick={onClose}>Maybe later</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="camera" role="dialog" aria-label="Camera" data-testid="camera" data-status={status}>
+    <div className="camera" role="dialog" aria-label="Camera" data-testid="camera" data-status={primed === null ? 'checking' : status}>
       {status === 'review' && shot ? (
         shot.kind === 'image' ? (
           <img className="camera-feed" src={shot.url} alt="Captured photo" />

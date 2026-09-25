@@ -11,7 +11,9 @@ import {
   formatRecordingTime,
   loadHandsFreePrefs,
   pickRecorderMimeType,
+  rememberCameraGranted,
   saveHandsFreePrefs,
+  shouldShowCameraPrimer,
 } from '../../client/src/lib/camera.js';
 
 describe('pickRecorderMimeType', () => {
@@ -108,5 +110,36 @@ describe('hands-free preferences', () => {
   it('offers Off/3s/10s countdowns and 15/30/60s lengths within the 60s cap', () => {
     expect(HANDS_FREE_DELAYS).toEqual([0, 3, 10]);
     expect(HANDS_FREE_LENGTHS).toEqual([15, 30, 60]);
+  });
+});
+
+describe('camera permission primer', () => {
+  const storage = (items = {}) => ({ getItem: (k) => items[k] ?? null, setItem: (k, v) => (items[k] = v), items });
+  const nav = (state) => ({
+    mediaDevices: { getUserMedia() {} },
+    permissions: state ? { query: async () => ({ state }) } : undefined,
+  });
+
+  it('shows when permission has not been asked yet', async () => {
+    expect(await shouldShowCameraPrimer({ storage: storage(), nav: nav('prompt') })).toBe(true);
+  });
+  it('shows when the Permissions API cannot tell (iOS WebView)', async () => {
+    expect(await shouldShowCameraPrimer({ storage: storage(), nav: nav(null) })).toBe(true);
+    const throwing = { mediaDevices: { getUserMedia() {} }, permissions: { query: async () => { throw new TypeError('camera'); } } };
+    expect(await shouldShowCameraPrimer({ storage: storage(), nav: throwing })).toBe(true);
+  });
+  it('skips when already granted, and remembers that', async () => {
+    const s = storage();
+    expect(await shouldShowCameraPrimer({ storage: s, nav: nav('granted') })).toBe(false);
+    expect(s.items.storytime_camera_ok).toBe('1');
+  });
+  it('skips when blocked or unsupported (the camera explains those itself)', async () => {
+    expect(await shouldShowCameraPrimer({ storage: storage(), nav: nav('denied') })).toBe(false);
+    expect(await shouldShowCameraPrimer({ storage: storage(), nav: {} })).toBe(false);
+  });
+  it('skips once the camera has worked on this device', async () => {
+    const s = storage();
+    rememberCameraGranted(s);
+    expect(await shouldShowCameraPrimer({ storage: s, nav: nav('prompt') })).toBe(false);
   });
 });

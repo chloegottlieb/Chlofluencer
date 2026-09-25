@@ -13,6 +13,7 @@ describe('POST /api/auth/signup', () => {
       password: 'password1',
       displayName: 'Maya',
       interests: ['#Travel', 'food'],
+      acceptTerms: true,
     });
     expect(res.status).toBe(201);
     expect(res.body.token).toBeTypeOf('string');
@@ -40,17 +41,17 @@ describe('POST /api/auth/signup', () => {
     const res = await t
       .request()
       .post('/api/auth/signup')
-      .send({ username: 'valid', email: 'v@example.com', password: 'password1', ...override });
+      .send({ username: 'valid', email: 'v@example.com', password: 'password1', acceptTerms: true, ...override });
     expect(res.status).toBe(400);
     expect(res.body.field).toBe(field);
   });
 
   it('rejects duplicate usernames and emails', async () => {
     await t.signup('taken');
-    const dupUser = await t.request().post('/api/auth/signup').send({ username: 'TAKEN', email: 'x@example.com', password: 'password1' });
+    const dupUser = await t.request().post('/api/auth/signup').send({ username: 'TAKEN', email: 'x@example.com', password: 'password1', acceptTerms: true });
     expect(dupUser.status).toBe(409);
     expect(dupUser.body.field).toBe('username');
-    const dupEmail = await t.request().post('/api/auth/signup').send({ username: 'other', email: 'taken@example.com', password: 'password1' });
+    const dupEmail = await t.request().post('/api/auth/signup').send({ username: 'other', email: 'taken@example.com', password: 'password1', acceptTerms: true });
     expect(dupEmail.status).toBe(409);
     expect(dupEmail.body.field).toBe('email');
   });

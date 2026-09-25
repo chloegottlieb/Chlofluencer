@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import Avatar from '../components/Avatar.jsx';
+import ReportSheet from '../components/ReportSheet.jsx';
 import { timeAgo } from '../lib/time.js';
+import { mediaUrl } from '../lib/media.js';
 
 const POLL_MS = 4000;
 
@@ -15,8 +17,8 @@ function StoryRef({ story, fromMe }) {
     <span className="story-ref">
       <span className="muted small-text">{label}</span>
       <span className="story-ref-thumb" style={{ background: story.background }}>
-        {story.type === 'image' && <img src={story.mediaUrl} alt="" />}
-        {story.type === 'video' && <video src={story.mediaUrl} muted preload="metadata" />}
+        {story.type === 'image' && <img src={mediaUrl(story.mediaUrl)} alt="" />}
+        {story.type === 'video' && <video src={mediaUrl(story.mediaUrl)} muted preload="metadata" />}
         {story.type === 'text' && <span>{story.text}</span>}
       </span>
     </span>
@@ -30,8 +32,10 @@ export default function Conversation() {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  const [reporting, setReporting] = useState(null);
   const bottomRef = useRef(null);
   const countRef = useRef(0);
+  const blockedRef = useRef(false);
 
   const load = useCallback(
     () =>
@@ -97,15 +101,30 @@ export default function Conversation() {
           <li key={m.id} className={`bubble-row ${m.fromMe ? 'mine' : 'theirs'}`} data-testid="message">
             {m.story && <StoryRef story={m.story} fromMe={m.fromMe} />}
             <span className="bubble">{m.text}</span>
-            <span className="bubble-time">
+            <span className="bubble-time bubble-actions">
               {timeAgo(m.createdAt)}
               {m.fromMe && m.readAt && ' · Seen'}
+              {!m.fromMe && (
+                <button type="button" aria-label="Report message" onClick={() => setReporting(m.id)}>Report</button>
+              )}
             </span>
           </li>
         ))}
         <li ref={bottomRef} aria-hidden />
       </ol>
 
+      {reporting && (
+        <ReportSheet
+          targetType="message"
+          targetId={reporting}
+          username={thread.user.username}
+          onDone={(res) => (blockedRef.current = !!res.blocked)}
+          onClose={() => {
+            setReporting(null);
+            if (blockedRef.current) navigate('/messages');
+          }}
+        />
+      )}
       {error && <p className="form-error" role="alert">{error}</p>}
       {thread.canMessage ? (
         <form className="composer" onSubmit={send}>

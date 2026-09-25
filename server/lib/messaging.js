@@ -19,6 +19,7 @@ export function isMutual(db, a, b) {
 export const MESSAGING_REASONS = {
   mutual: null,
   self: "You can't message yourself",
+  unavailable: 'This account is unavailable',
   blocked: "You can't message this account",
   not_mutual: 'You can message people once you both follow each other',
 };
@@ -26,6 +27,7 @@ export const MESSAGING_REASONS = {
 export function messagingStatus(db, meId, otherId) {
   let reason = 'mutual';
   if (meId === otherId) reason = 'self';
+  else if (db.find('users', (u) => u.id === otherId)?.suspended) reason = 'unavailable';
   else if (isBlockedEitherWay(db, meId, otherId)) reason = 'blocked';
   else if (!isMutual(db, meId, otherId)) reason = 'not_mutual';
   return { canMessage: reason === 'mutual', reason, message: MESSAGING_REASONS[reason] };

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { registerBackButton } from './lib/native.js';
 import { api } from './api.js';
 import { useAuth } from './auth.jsx';
 import BottomNav from './components/BottomNav.jsx';
@@ -9,6 +10,9 @@ import Create from './pages/Create.jsx';
 import EditProfile from './pages/EditProfile.jsx';
 import Conversation from './pages/Conversation.jsx';
 import Home from './pages/Home.jsx';
+import Legal from './pages/Legal.jsx';
+import Moderation from './pages/Moderation.jsx';
+import TermsGate from './components/TermsGate.jsx';
 import Messages from './pages/Messages.jsx';
 import Login from './pages/Login.jsx';
 import Profile from './pages/Profile.jsx';
@@ -28,15 +32,30 @@ function useUnreadCount(user) {
   return unread;
 }
 
+const LEGAL_PATHS = ['/privacy', '/terms', '/guidelines', '/delete-account'];
+
 export default function App() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let cleanup = () => {};
+    registerBackButton(navigate).then((fn) => (cleanup = fn));
+    return () => cleanup();
+  }, [navigate]);
   const unread = useUnreadCount(user);
 
   if (loading) return <div className="splash">Storytime</div>;
 
+  const legalRoutes = ['privacy', 'terms', 'guidelines', 'delete-account'].map((doc) => (
+    <Route key={doc} path={`/${doc}`} element={<Legal doc={doc} />} />
+  ));
+
   if (!user) {
     return (
       <Routes>
+        {legalRoutes}
         <Route path="/signup" element={<Signup />} />
         <Route path="*" element={<Login />} />
       </Routes>
@@ -57,12 +76,15 @@ export default function App() {
           <Route path="/u/:username" element={<Profile />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:username" element={<Conversation />} />
+          <Route path="/moderation" element={<Moderation />} />
+          {legalRoutes}
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/signup" element={<Navigate to="/" replace />} />
           <Route path="*" element={<div className="page"><p className="muted center">Page not found.</p></div>} />
         </Routes>
       </main>
       <BottomNav unread={unread} />
+      {user.needsTermsAcceptance && !LEGAL_PATHS.includes(pathname) && <TermsGate />}
     </div>
   );
 }

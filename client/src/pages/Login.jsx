@@ -53,7 +53,10 @@ export default function Login() {
         <p className="center">
           New here? <Link to="/signup">Create an account</Link>
         </p>
-        <p className="muted center small-text">Demo account: demo / password123</p>
+        {import.meta.env.DEV && <p className="muted center small-text">Demo account: demo / password123</p>}
+        <p className="center small-text">
+          <Link to="/terms">Terms</Link> · <Link to="/privacy">Privacy</Link> · <Link to="/guidelines">Guidelines</Link>
+        </p>
       </form>
     </div>
   );

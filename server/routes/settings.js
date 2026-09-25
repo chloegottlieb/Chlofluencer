@@ -19,9 +19,7 @@ export default function settingsRoutes({ db, auth, secret }) {
 
     // Switching from private to public auto-approves pending follow requests.
     if (current.privacy.privateAccount && !settings.privacy.privateAccount) {
-      for (const f of db.filter('follows', (f) => f.followeeId === req.user.id && f.status === 'pending')) {
-        f.status = 'accepted';
-      }
+      db.updateMany('follows', (f) => f.followeeId === req.user.id && f.status === 'pending', { status: 'accepted' });
     }
     if (db.find('settings', (s) => s.userId === req.user.id)) {
       db.update('settings', (s) => s.userId === req.user.id, { values: settings });

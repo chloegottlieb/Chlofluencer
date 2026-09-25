@@ -37,6 +37,7 @@ export function hiddenAuthorIds(db, viewerId) {
   }
   for (const m of db.all('mutes')) if (m.muterId === viewerId) ids.add(m.mutedId);
   for (const n of db.all('notInterested')) if (n.userId === viewerId) ids.add(n.authorId);
+  for (const u of db.all('users')) if (u.suspended) ids.add(u.id);
   return ids;
 }
 
@@ -52,8 +53,11 @@ export function canViewContent(db, viewerId, author) {
 export function canViewStory(db, viewerId, story, { now, ignoreExpiry = false } = {}) {
   if (!story) return false;
   if (story.authorId === viewerId) return true;
+  // Hidden pending review, or removed by a moderator.
+  if (story.moderation) return false;
   if (!ignoreExpiry && story.expiresAt <= now) return false;
   const author = db.find('users', (u) => u.id === story.authorId);
+  if (!author || author.suspended) return false;
   if (!canViewContent(db, viewerId, author)) return false;
   if (story.audience === 'followers') return isFollowing(db, viewerId, story.authorId);
   return true;

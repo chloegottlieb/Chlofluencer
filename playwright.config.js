@@ -25,7 +25,9 @@ export default defineConfig({
     command: `node -e "require('fs').rmSync('.e2e-data',{recursive:true,force:true})" && node server/index.js`,
     url: `http://localhost:${PORT}/api/health`,
     reuseExistingServer: false,
-    env: { PORT: String(PORT), DATA_DIR: '.e2e-data', JWT_SECRET: 'e2e-secret' },
+    // Every test signs up fresh accounts from one IP, so rate limits are off here
+    // (they have their own API tests).
+    env: { PORT: String(PORT), DATA_DIR: '.e2e-data', JWT_SECRET: 'e2e-secret', RATE_LIMITS: 'off', SUPPORT_EMAIL: 'help@storytime.test' },
     timeout: 30_000,
   },
 });

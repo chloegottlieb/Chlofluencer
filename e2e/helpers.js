@@ -7,7 +7,7 @@ export const uniqueName = (prefix = 'u') => `${prefix}${Date.now().toString(36)}
 export async function apiSignup(request, prefix = 'user', extra = {}) {
   const username = uniqueName(prefix);
   const res = await request.post('/api/auth/signup', {
-    data: { username, email: `${username}@example.com`, password: 'password123', ...extra },
+    data: { username, email: `${username}@example.com`, password: 'password123', acceptTerms: true, ...extra },
   });
   expect(res.status()).toBe(201);
   const body = await res.json();

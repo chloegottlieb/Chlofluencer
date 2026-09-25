@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import Modal from './Modal.jsx';
+import { mediaUrl } from '../lib/media.js';
 
 /** Save one or more of your stories into a new or existing highlight. */
 export default function HighlightPicker({ storyIds, onClose, onSaved }) {
@@ -71,7 +72,7 @@ export default function HighlightPicker({ storyIds, onClose, onSaved }) {
           {highlights.map((h) => (
             <li key={h.id} className="list-row">
               <span className="highlight-cover small" style={{ background: h.cover?.background }}>
-                {h.cover?.mediaUrl && <img src={h.cover.mediaUrl} alt="" />}
+                {h.cover?.mediaUrl && <img src={mediaUrl(h.cover.mediaUrl)} alt="" />}
               </span>
               <span className="grow">
                 {h.title} <span className="muted">· {h.storyCount}</span>

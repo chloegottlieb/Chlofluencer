@@ -16,6 +16,8 @@ test.describe('Feature: Accounts and profiles', () => {
     await page.getByLabel('Password').fill('password123');
     await page.getByRole('button', { name: '#travel' }).click();
     await page.getByRole('button', { name: '#food' }).click();
+    await expect(page.getByRole('button', { name: 'Sign up' })).toBeDisabled();
+    await page.getByRole('checkbox', { name: /agree to the Terms/ }).check();
     await page.getByRole('button', { name: 'Sign up' }).click();
     await expect(page.getByText('Your story')).toBeVisible();
     await page.getByRole('link', { name: 'Profile' }).click();

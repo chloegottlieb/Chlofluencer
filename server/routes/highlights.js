@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { HttpError } from '../auth.js';
 import { LIMITS } from '../lib/validation.js';
+import { assertClean } from '../lib/contentFilter.js';
 import { canViewContent, isFollowing, newId, storyStats } from '../lib/social.js';
 import { serializeStory } from '../lib/serialize.js';
 
@@ -13,6 +14,7 @@ export default function highlightRoutes({ db, auth, now }) {
   const validTitle = (title) => {
     const t = String(title ?? '').trim();
     if (!t) throw new HttpError(400, 'Give your highlight a name', { field: 'title' });
+    assertClean({ title: t });
     if (t.length > LIMITS.highlightTitleMax) throw new HttpError(400, `Highlight names must be ${LIMITS.highlightTitleMax} characters or fewer`, { field: 'title' });
     return t;
   };
@@ -43,7 +45,7 @@ export default function highlightRoutes({ db, auth, now }) {
       out.stories = h.storyIds
         .map((id) => db.find('stories', (s) => s.id === id))
         .filter(Boolean)
-        .filter((s) => s.authorId === viewerId || s.audience === 'public' || isFollowing(db, viewerId, s.authorId))
+        .filter((s) => s.authorId === viewerId || (!s.moderation && (s.audience === 'public' || isFollowing(db, viewerId, s.authorId))))
         .map((s) => serializeStory(db, s, viewerId, { stats, now: now() }));
     }
     return out;

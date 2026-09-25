@@ -6,6 +6,7 @@ import { canViewStory, getSettings, isFollowing, newId, notify, publicUser, stor
 import { serializeStory } from '../lib/serialize.js';
 import { mediaKind, removeUpload } from '../uploads.js';
 import { conversationId, isMutual } from '../lib/messaging.js';
+import { CONTENT_REJECTED, findBlockedTerm } from '../lib/contentFilter.js';
 
 const DEFAULT_BACKGROUND = 'linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)';
 const bool = (v, fallback) => (v === undefined || v === '' ? fallback : v === true || v === 'true');
@@ -31,6 +32,11 @@ export default function storyRoutes({ db, auth, now, upload, uploadDir }) {
     if (req.file) type = mediaKind(req.file.mimetype);
     if (type === 'text' && !text) {
       throw new HttpError(400, 'Add a photo, video or some text to share a story');
+    }
+    const blockedField = [['text', text], ['caption', caption], ['tags', String(body.tags ?? '')]].find(([, v]) => findBlockedTerm(v));
+    if (blockedField) {
+      cleanup();
+      throw new HttpError(400, CONTENT_REJECTED, { field: blockedField[0] });
     }
     if (text.length > LIMITS.storyTextMax) {
       cleanup();
@@ -176,6 +182,7 @@ export default function storyRoutes({ db, auth, now, upload, uploadDir }) {
     const text = String(req.body?.text ?? '').trim();
     if (!text) throw new HttpError(400, 'Reply cannot be empty', { field: 'text' });
     if (text.length > LIMITS.replyMax) throw new HttpError(400, `Reply must be ${LIMITS.replyMax} characters or fewer`, { field: 'text' });
+    if (findBlockedTerm(text)) throw new HttpError(400, CONTENT_REJECTED, { field: 'text' });
     const pref = getSettings(db, story.authorId).privacy.storyReplies;
     if (pref === 'off') throw new HttpError(403, 'Replies are turned off for this story');
     if (pref === 'following' && !isFollowing(db, story.authorId, req.user.id)) {

@@ -1,0 +1,18 @@
+{
+  "appId": "app.storytime.social",
+  "appName": "Storytime",
+  "webDir": "dist",
+  "backgroundColor": "#000000",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#000000"
+  },
+  "android": {
+    "backgroundColor": "#000000"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}

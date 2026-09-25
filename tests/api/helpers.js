@@ -15,11 +15,11 @@ export const PNG = Buffer.from(
 );
 
 /** Spin up an isolated app with an in-memory DB and a controllable clock. */
-export function setup() {
+export function setup({ rateLimits = false, moderators = [] } = {}) {
   const db = createDb();
   const clock = { now: T0 };
   const uploadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cf-uploads-'));
-  const app = createApp({ db, secret: 'test-secret', uploadDir, now: () => clock.now });
+  const app = createApp({ db, secret: 'test-secret', uploadDir, now: () => clock.now, rateLimits, moderators, supportEmail: 'help@test.dev' });
 
   const as = (token) => {
     const wrap = (method) => (url) => {
@@ -33,7 +33,7 @@ export function setup() {
   async function signup(username = `user${++n}`, extra = {}) {
     const res = await request(app)
       .post('/api/auth/signup')
-      .send({ username, email: `${username}@example.com`, password: 'password1', ...extra });
+      .send({ username, email: `${username}@example.com`, password: 'password1', acceptTerms: true, ...extra });
     if (res.status !== 201) throw new Error(`signup failed: ${JSON.stringify(res.body)}`);
     return { ...res.body, api: as(res.body.token) };
   }

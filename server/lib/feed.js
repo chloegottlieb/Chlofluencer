@@ -156,7 +156,7 @@ export function buildFriendGroups({ now, stories, followingIds, hiddenAuthorIds,
   const byAuthor = new Map();
   for (const story of stories) {
     if (!followingIds.has(story.authorId) || hiddenAuthorIds.has(story.authorId)) continue;
-    if (!isActive(story, now) || !canSeeAsFollower(story)) continue;
+    if (!isActive(story, now) || !canSeeAsFollower(story) || story.moderation) continue;
     if (!byAuthor.has(story.authorId)) byAuthor.set(story.authorId, []);
     byAuthor.get(story.authorId).push(story);
   }
@@ -177,7 +177,8 @@ export function buildFriendGroups({ now, stories, followingIds, hiddenAuthorIds,
 
 /** Is this story eligible to be recommended to a non-follower? */
 export function isDiscoverable(story, { viewerId, now, author, followingIds, hiddenAuthorIds, seenStoryIds, hideSensitive }) {
-  if (!author) return false;
+  if (!author || author.suspended) return false;
+  if (story.moderation) return false;
   if (story.authorId === viewerId) return false;
   if (followingIds.has(story.authorId) || hiddenAuthorIds.has(story.authorId)) return false;
   if (!isActive(story, now)) return false;

@@ -10,14 +10,14 @@ export default function notificationRoutes({ db, auth }) {
       .filter('notifications', (n) => n.userId === req.user.id)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 100)
-      .map((n) => ({ ...n, actor: publicUser(db.find('users', (u) => u.id === n.actorId)) }))
-      .filter((n) => n.actor);
+      .map((n) => ({ ...n, actor: n.actorId ? publicUser(db.find('users', (u) => u.id === n.actorId)) : null }))
+      // System notices (moderation outcomes) have no actor; drop ones whose actor was deleted.
+      .filter((n) => n.actor || !n.actorId);
     res.json({ notifications, unread: notifications.filter((n) => !n.read).length });
   });
 
   router.post('/read', (req, res) => {
-    for (const n of db.filter('notifications', (n) => n.userId === req.user.id && !n.read)) n.read = true;
-    db.persist();
+    db.updateMany('notifications', (n) => n.userId === req.user.id && !n.read, { read: true });
     res.json({ ok: true });
   });
 

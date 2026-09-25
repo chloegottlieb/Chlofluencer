@@ -20,18 +20,21 @@ import {
 } from '../lib/social.js';
 import { serializeStory } from '../lib/serialize.js';
 import { selfUser } from './auth.js';
+import { assertClean } from '../lib/contentFilter.js';
 import { messagingStatus } from '../lib/messaging.js';
 import { removeUpload, mediaKind } from '../uploads.js';
 
-export default function userRoutes({ db, auth, now, upload, uploadDir }) {
+export default function userRoutes({ db, auth, now, upload, uploadDir, moderators }) {
   const router = Router();
   router.use(auth);
 
-  const byUsername = (username) => {
+  // Suspended accounts disappear from the app (moderators can still see them).
+  const byUsername = (username, req) => {
     const user = db.find('users', (u) => u.username === String(username).toLowerCase());
-    if (!user) throw new HttpError(404, 'User not found');
+    if (!user || (user.suspended && !req?.isModerator)) throw new HttpError(404, 'User not found');
     return user;
   };
+  const visible = (u) => u && !u.suspended;
 
   const counts = (userId) => ({
     followers: db.filter('follows', (f) => f.followeeId === userId && f.status === 'accepted').length,
@@ -49,6 +52,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
       if (name.length > LIMITS.displayNameMax) throw new HttpError(400, `Name must be ${LIMITS.displayNameMax} characters or fewer`, { field: 'displayName' });
       patch.displayName = name;
     }
+    assertClean({ displayName, bio, website });
     if (bio !== undefined) {
       assertValid(validateBio(bio), 'bio');
       patch.bio = String(bio);
@@ -59,7 +63,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
     }
     if (interests !== undefined) patch.interests = normalizeTags(interests, LIMITS.maxInterests);
     const user = db.update('users', (u) => u.id === req.user.id, patch);
-    res.json({ user: selfUser(db, user) });
+    res.json({ user: selfUser(db, user, moderators) });
   });
 
   router.post('/me/avatar', upload.single('avatar'), (req, res) => {
@@ -70,13 +74,13 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
     }
     removeUpload(uploadDir, req.user.avatarUrl);
     const user = db.update('users', (u) => u.id === req.user.id, { avatarUrl: `/uploads/${req.file.filename}` });
-    res.json({ user: selfUser(db, user) });
+    res.json({ user: selfUser(db, user, moderators) });
   });
 
   router.delete('/me/avatar', (req, res) => {
     removeUpload(uploadDir, req.user.avatarUrl);
     const user = db.update('users', (u) => u.id === req.user.id, { avatarUrl: null });
-    res.json({ user: selfUser(db, user) });
+    res.json({ user: selfUser(db, user, moderators) });
   });
 
   router.delete('/me', (req, res) => {
@@ -144,6 +148,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
       .filter(
         'users',
         (u) =>
+          visible(u) &&
           !isBlockedEitherWay(db, req.user.id, u.id) &&
           (u.username.includes(q) || u.displayName.toLowerCase().includes(q)),
       )
@@ -155,7 +160,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
 
   // --- Other profiles -----------------------------------------------------
   router.get('/:username', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     const me = req.user.id;
     if (user.id !== me && db.find('blocks', (b) => b.blockerId === user.id && b.blockedId === me)) {
       throw new HttpError(404, 'User not found');
@@ -165,7 +170,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
     const rec = followRecord(db, me, user.id);
     const canView = canViewContent(db, me, user);
     const activeStories = canView
-      ? db.filter('stories', (s) => s.authorId === user.id && s.expiresAt > t && (s.audience === 'public' || user.id === me || rec?.status === 'accepted'))
+      ? db.filter('stories', (s) => s.authorId === user.id && s.expiresAt > t && (user.id === me || (!s.moderation && (s.audience === 'public' || rec?.status === 'accepted'))))
       : [];
     res.json({
       user: publicUser(user),
@@ -192,7 +197,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
   });
 
   router.get('/:username/stories', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     const t = now();
     const stats = storyStats(db);
     const stories = db
@@ -203,25 +208,29 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
   });
 
   router.get('/:username/followers', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     if (!canViewContent(db, req.user.id, user)) throw new HttpError(403, 'This account is private');
     const users = db
       .filter('follows', (f) => f.followeeId === user.id && f.status === 'accepted')
-      .map((f) => publicUser(db.find('users', (u) => u.id === f.followerId)));
+      .map((f) => db.find('users', (u) => u.id === f.followerId))
+      .filter(visible)
+      .map(publicUser);
     res.json({ users });
   });
 
   router.get('/:username/following', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     if (!canViewContent(db, req.user.id, user)) throw new HttpError(403, 'This account is private');
     const users = db
       .filter('follows', (f) => f.followerId === user.id && f.status === 'accepted')
-      .map((f) => publicUser(db.find('users', (u) => u.id === f.followeeId)));
+      .map((f) => db.find('users', (u) => u.id === f.followeeId))
+      .filter(visible)
+      .map(publicUser);
     res.json({ users });
   });
 
   router.post('/:username/follow', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     const me = req.user.id;
     if (user.id === me) throw new HttpError(400, "You can't follow yourself");
     if (isBlockedEitherWay(db, me, user.id)) throw new HttpError(403, "You can't follow this account");
@@ -236,20 +245,20 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
   });
 
   router.delete('/:username/follow', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     db.remove('follows', (f) => f.followerId === req.user.id && f.followeeId === user.id);
     res.json({ following: 'none' });
   });
 
   router.delete('/:username/follower', (req, res) => {
-    const user = byUsername(req.params.username);
+    const user = byUsername(req.params.username, req);
     db.remove('follows', (f) => f.followerId === user.id && f.followeeId === req.user.id);
     res.json({ ok: true });
   });
 
   const toggle = (collection, makeDoc, matches, onAdd) => {
     router.post(`/:username/${collection.path}`, (req, res) => {
-      const user = byUsername(req.params.username);
+      const user = byUsername(req.params.username, req);
       if (user.id === req.user.id) throw new HttpError(400, `You can't ${collection.verb} yourself`);
       if (!db.find(collection.name, (d) => matches(d, req.user.id, user.id))) {
         db.insert(collection.name, makeDoc(req.user.id, user.id));
@@ -258,7 +267,7 @@ export default function userRoutes({ db, auth, now, upload, uploadDir }) {
       res.json({ [collection.flag]: true });
     });
     router.delete(`/:username/${collection.path}`, (req, res) => {
-      const user = byUsername(req.params.username);
+      const user = byUsername(req.params.username, req);
       db.remove(collection.name, (d) => matches(d, req.user.id, user.id));
       res.json({ [collection.flag]: false });
     });

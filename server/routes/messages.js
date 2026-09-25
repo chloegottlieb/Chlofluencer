@@ -3,6 +3,7 @@ import { HttpError } from '../auth.js';
 import { LIMITS } from '../lib/validation.js';
 import { canViewStory, isBlockedEitherWay, newId, publicUser } from '../lib/social.js';
 import { conversationId, isMutual, messagingStatus } from '../lib/messaging.js';
+import { assertClean } from '../lib/contentFilter.js';
 
 export default function messageRoutes({ db, auth, now }) {
   const router = Router();
@@ -10,7 +11,7 @@ export default function messageRoutes({ db, auth, now }) {
 
   const findUser = (username) => {
     const user = db.find('users', (u) => u.username === String(username).toLowerCase());
-    if (!user) throw new HttpError(404, 'User not found');
+    if (!user || user.suspended) throw new HttpError(404, 'User not found');
     return user;
   };
 
@@ -55,7 +56,7 @@ export default function messageRoutes({ db, auth, now }) {
       byPartner.set(partnerId, row);
     }
     const conversations = [...byPartner.entries()]
-      .filter(([partnerId]) => !isBlockedEitherWay(db, me, partnerId))
+      .filter(([partnerId]) => !isBlockedEitherWay(db, me, partnerId) && !db.find('users', (u) => u.id === partnerId)?.suspended)
       .map(([partnerId, row]) => ({
         user: publicUser(db.find('users', (u) => u.id === partnerId)),
         lastMessage: { text: row.last.text, fromMe: row.last.fromId === me, createdAt: row.last.createdAt, isStoryReply: !!row.last.storyId },
@@ -95,14 +96,7 @@ export default function messageRoutes({ db, auth, now }) {
     const cid = conversationId(me, other.id);
     const t = now();
     const messages = db.filter('messages', (m) => m.conversationId === cid).sort((a, b) => a.createdAt - b.createdAt);
-    let marked = false;
-    for (const m of messages) {
-      if (m.toId === me && !m.readAt) {
-        m.readAt = t;
-        marked = true;
-      }
-    }
-    if (marked) db.persist();
+    db.updateMany('messages', (m) => m.conversationId === cid && m.toId === me && !m.readAt, { readAt: t });
     res.json({
       user: publicUser(other),
       ...messagingStatus(db, me, other.id),
@@ -116,6 +110,7 @@ export default function messageRoutes({ db, auth, now }) {
     if (!status.canMessage) throw new HttpError(403, status.message, { reason: status.reason });
     const text = String(req.body?.text ?? '').trim();
     if (!text) throw new HttpError(400, 'Message cannot be empty', { field: 'text' });
+    assertClean({ text });
     if (text.length > LIMITS.messageMax) {
       throw new HttpError(400, `Messages must be ${LIMITS.messageMax} characters or fewer`, { field: 'text' });
     }
